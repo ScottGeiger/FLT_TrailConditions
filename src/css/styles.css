@@ -1,0 +1,138 @@
+/* reset */
+h2,h3,h4,h5,ol,ul,li,dl,dt,dd,p {
+    margin: 0;
+    padding: 0;
+}
+
+/* header */
+main>header>div {
+    display: grid;
+    gap:1rem;
+    grid-template-columns: auto 1fr;
+    justify-content:flex-start;
+}
+
+/* key */
+#key-container {
+    margin-top:0.23rem;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: auto 1fr;
+    justify-content: flex-start
+}
+#key-container dl {   
+    display:flex;
+    gap:1rem;
+    margin-top:0.23rem;
+}
+#key-container dl dd { margin-inline-start: 1rem;}
+.key {
+    margin-top:0.23rem;
+    display:inline-block;
+    width: 30px;
+    height: 10px;    
+}
+.key-active-closure { background-color:red }
+.key-temp-notice { background-color:green }
+.key-active-notice { background-color:blue }
+.key-no-active { background-color:gray }
+
+/* Map Links */
+#mapLinks {
+    display: flex;
+    gap: 10px;
+    flex-wrap:wrap
+}
+#mapLinks a { color: gray; }
+#mapLinks a.active-notice { color: blue; }
+#mapLinks a.active-temp { color: magenta }
+#mapLinks a.active-closure { color: red; }
+
+/* MEDIA QUERIES */
+@media (max-width: 839px) {
+    /* Header */
+    main>header>div {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+}
+
+#notice-table {
+    border: 1px solid #000;
+    border-collapse: collapse;
+    width: 100%
+}
+#notice-table td,#notice-table th {
+    padding: 10px
+}
+#notice-table thead {
+    background-color: #c3512f;
+    color: #fff;
+    position:sticky;
+    top: 0
+}
+#notice-table thead th {
+    text-align: center;
+    font-size: 22px
+}
+#notice-table thead tr td div {
+    display: flex;
+    justify-content: space-between
+}
+
+#notice-table thead tr td p {
+    margin: 0
+}
+
+
+/* body */
+#notice-table tbody tr td {
+    border: 1px solid #000;
+}
+#notice-table tbody tr td:first-child {
+    width: 160px;
+}
+/*
+#notice-table tbody tr td {
+    display: grid;
+    grid-template-columns: 160px auto;
+    border-bottom: 1px solid #000;
+}
+#notice-table tbody td:first-child { 
+    border-right: 1px solid #000;
+}
+
+#notice-table tbody tr.archived {
+    background-image: url('/images/expired.png');
+    background-repeat: repeat;
+    background-color: #cdcdcd
+}
+*/
+
+/* Map Links */
+/*#mapLinks {
+    display: flex;
+    gap: 10px;
+    flex-wrap:wrap
+}
+*/
+
+/* media query for small screen */
+
+@media (max-width: 767px) {
+    #notice-table tbody tr td:first-child {
+        width: auto;
+    }
+    #notice-table tbody tr td {
+        border-width: 0 0 1px;
+        border-style: solid;
+        border-color: #000
+    }
+    
+    #notice-table tbody tr {
+        display: flex;
+        flex-direction: column;
+    }
+}
+
