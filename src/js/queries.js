@@ -1,4 +1,4 @@
-import {useQuery} from "react-query";
+import { useQuery } from "@tanstack/react-query";
 
 const requestTimeout = 20000; //in milliseconds
 
@@ -6,11 +6,13 @@ const requestTimeout = 20000; //in milliseconds
 function q(u,m,b) {
     return d => {
         const bd = d || b;
-        let opts = {Accept:'application/json',headers:{ContentType:'application/json'},method:m||'GET'};
+        let opts = {
+            method:m||'GET'
+        };
         if (['POST','PUT','PATCH'].includes(m)) opts.body = bd && JSON.stringify(bd);
         return new Promise((res,rej) => {
             Promise.race([
-                fetch(`https://fingerlakestrail.org/FLTCAdmin/api/api.php/${u}`,opts).then(r=>(!r.ok)?rej({name:r.status,message:r.statusText,description:r.headers.get('X-Error-Description')}):r.json()),
+                fetch(`https://fingerlakestrail.org/FLTCAdmin/api/api.php/${u}`,opts).then(r=>(r.ok)?r.json():rej({name:r.status,message:r.statusText,description:r.headers.get('X-Error-Description')})).catch(e=>rej(e)),
                 new Promise((resolve,reject)=>setTimeout(reject,requestTimeout,{staus:408,name:'408',message:'Request Timeout'}))
             ]).then(j=>res(j)).catch(e=>rej(e));
         });
@@ -19,8 +21,14 @@ function q(u,m,b) {
 
 //TODO: add code for local storage
 export function useMapQueries() {
-    const getMaps = () => useQuery('maps',q('maps'));
-    const getNotices = () => useQuery('notices',q('notices'));
+    const getMaps = (...args) => {
+        const options = args[0]?.options||args[0]||{};
+        return useQuery(['maps'],q('maps'),options);
+    }
+    const getNotices = (...args) => {
+        const options = args[0]?.options||args[0]||{};
+        return useQuery(['notices'],q('trailconditions'),options);
+    }
 
     return {getMaps,getNotices};
 }

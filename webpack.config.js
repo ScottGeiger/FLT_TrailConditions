@@ -36,7 +36,8 @@ module.exports = (env, argv) => {
                     test: /.s?css$/,
                     use:[
                         (env.WEBPACK_SERVE)?"style-loader":MiniCssExtractPlugin.loader,
-                        "css-loader"
+                        "css-loader",
+                        "sass-loader"
                     ],
                 }
             ]

@@ -1,16 +1,24 @@
 import React from "react";
 import ReactDOM from "react-dom";
-//import {BrowserRouter} from "react-router-dom";
-import {QueryClient,QueryClientProvider} from "react-query";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { red, blue, grey, lightBlue } from "@mui/material/colors";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { CookiesProvider } from 'react-cookie';
+import { BrowserRouter } from "react-router-dom";
+
+import '../scss/app.scss';
+import '../css/styles.css';
+
 import App from "./app";
 
 const queryClient = new QueryClient({
     defaultOptions:{
         queries:{
-            cacheTime:1800000,
-            staleTime:60000,
+            networkMode:'always',
+            refetchOnWindowFocus:false, //for testing
+            cacheTime: 1000 * 60 * 60 * 24, // 24 hours
+            staleTime: 1000 * 60 * 5, // 5 minutes
             notifyOnChangeProps:['data','error'],
             retry:2,
             retryDelay:attempt=>Math.min(attempt > 0 ? 2 ** attempt * 2000 : 1000, 30 * 1000)
@@ -18,32 +26,28 @@ const queryClient = new QueryClient({
     }
 });
 
-const theme = createTheme({
-    palette: {
-        closure : {
-            main: red[800],
-            contrastText: '#fff'
-        },
-        notice : {
-            main: lightBlue[800],
-            contrastText: '#fff'
-        },
-        inactive: {
-            main: grey[600],
-            contrastText: '#fff'
-        },
-        noticeHeader: {
-            main: '#c3512f',
-            contrastText: 'fff'
-        }
-    }
+const persister = createSyncStoragePersister({
+    storage: window.localStorage,
+    maxAge: 1000 * 60 * 60 * 23
 });
 
+/*persistQueryClient({
+    queryClient,
+    persister,
+    maxAge: 1000 * 60 * 60 * 24, // 24 hours
+    buster:'',
+    hydrateOptions:undefined,
+    dehydrateOptions:undefined,
+});*/
+
 ReactDOM.render(
-    <ThemeProvider theme={theme}>
-        <QueryClientProvider client={queryClient}>
-            <App/>
-        </QueryClientProvider>
-    </ThemeProvider>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{persister}}>
+        <CookiesProvider>
+            <BrowserRouter>
+                <App/>
+                <ReactQueryDevtools initialIsOpen={false} />
+            </BrowserRouter>
+        </CookiesProvider>
+    </PersistQueryClientProvider>
     ,document.querySelector('#root')
 );

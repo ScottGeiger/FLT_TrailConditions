@@ -1,138 +1,80 @@
-/* reset */
-h2,h3,h4,h5,ol,ul,li,dl,dt,dd,p {
-    margin: 0;
-    padding: 0;
-}
+/* App Styles */
 
-/* header */
-main>header>div {
-    display: grid;
-    gap:1rem;
-    grid-template-columns: auto 1fr;
-    justify-content:flex-start;
+/* center on page */
+.center-page {
+    width:100vw;
+    height:100vh;
+    display:grid;
+    justify-content: center;
+    align-content: center;
 }
+.center-page p { text-align:center }
 
-/* key */
-#key-container {
-    margin-top:0.23rem;
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: auto 1fr;
-    justify-content: flex-start
-}
-#key-container dl {   
-    display:flex;
-    gap:1rem;
-    margin-top:0.23rem;
-}
-#key-container dl dd { margin-inline-start: 1rem;}
-.key {
-    margin-top:0.23rem;
-    display:inline-block;
-    width: 30px;
-    height: 10px;    
-}
-.key-active-closure { background-color:red }
-.key-temp-notice { background-color:green }
-.key-active-notice { background-color:blue }
-.key-no-active { background-color:gray }
+/* smaller font */
+.font-size-95 { font-size: 95% }
+.font-size-90 { font-size: 90% }
 
-/* Map Links */
-#mapLinks {
-    display: flex;
-    gap: 10px;
-    flex-wrap:wrap
+/* spin animation class for iconify icons */
+.spin {
+    animation-name: spin;
+    animation-duration: 2000ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
 }
-#mapLinks a { color: gray; }
-#mapLinks a.active-notice { color: blue; }
-#mapLinks a.active-temp { color: magenta }
-#mapLinks a.active-closure { color: red; }
-
-/* MEDIA QUERIES */
-@media (max-width: 839px) {
-    /* Header */
-    main>header>div {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
+@keyframes spin {
+    from {
+        transform:rotate(0deg);
+    }
+    to {
+        transform:rotate(360deg);
     }
 }
 
-#notice-table {
-    border: 1px solid #000;
-    border-collapse: collapse;
-    width: 100%
+.nav-link {
+    cursor: pointer;
 }
-#notice-table td,#notice-table th {
-    padding: 10px
+.nav-link:hover { 
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
 }
-#notice-table thead {
+.nav-link.active {
+    /*text-decoration: underline;
+    text-decoration-thickness: 2px;*/
+    background-color: #a5cbd7;
+    border-radius: 6px;
+}
+.nav-link.disabled {
+    color: #c9c9c9;
+}
+
+#sticky-header {
+    position: sticky;
+    top:0;
+    background-color: #fff;
+    padding-top: 1px;
+    padding-bottom: 1px;
+}
+
+/* toTop Button */
+.toTop {
+    position:fixed;
+    bottom: 2rem;
+    right: 2rem;
+    opacity:0.9;
+}
+
+/* Notice Header Styles */
+#notice-grid section header {
     background-color: #c3512f;
     color: #fff;
-    position:sticky;
-    top: 0
 }
-#notice-table thead th {
-    text-align: center;
-    font-size: 22px
+#notice-grid section header .row:nth-child(1){
+    text-transform: uppercase;
 }
-#notice-table thead tr td div {
-    display: flex;
-    justify-content: space-between
+#notice-grid section header .row:nth-child(2){
+    font-variant: small-caps;
 }
-
-#notice-table thead tr td p {
-    margin: 0
-}
-
-
-/* body */
-#notice-table tbody tr td {
-    border: 1px solid #000;
-}
-#notice-table tbody tr td:first-child {
-    width: 160px;
-}
-/*
-#notice-table tbody tr td {
-    display: grid;
-    grid-template-columns: 160px auto;
-    border-bottom: 1px solid #000;
-}
-#notice-table tbody td:first-child { 
-    border-right: 1px solid #000;
-}
-
-#notice-table tbody tr.archived {
-    background-image: url('/images/expired.png');
+.expired {
+    background-image: url('../images/expired.png');
     background-repeat: repeat;
-    background-color: #cdcdcd
 }
-*/
-
-/* Map Links */
-/*#mapLinks {
-    display: flex;
-    gap: 10px;
-    flex-wrap:wrap
-}
-*/
-
-/* media query for small screen */
-
-@media (max-width: 767px) {
-    #notice-table tbody tr td:first-child {
-        width: auto;
-    }
-    #notice-table tbody tr td {
-        border-width: 0 0 1px;
-        border-style: solid;
-        border-color: #000
-    }
-    
-    #notice-table tbody tr {
-        display: flex;
-        flex-direction: column;
-    }
-}
-
