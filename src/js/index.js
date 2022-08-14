@@ -20,7 +20,7 @@ const queryClient = new QueryClient({
             cacheTime: 1000 * 60 * 60 * 24, // 24 hours
             staleTime: 1000 * 60 * 5, // 5 minutes
             notifyOnChangeProps:['data','error'],
-            retry:2,
+            retry:3,
             retryDelay:attempt=>Math.min(attempt > 0 ? 2 ** attempt * 2000 : 1000, 30 * 1000)
         }
     }
@@ -28,17 +28,8 @@ const queryClient = new QueryClient({
 
 const persister = createSyncStoragePersister({
     storage: window.localStorage,
-    maxAge: 1000 * 60 * 60 * 23
+    maxAge: 1000 * 60 * 60 * 24
 });
-
-/*persistQueryClient({
-    queryClient,
-    persister,
-    maxAge: 1000 * 60 * 60 * 24, // 24 hours
-    buster:'',
-    hydrateOptions:undefined,
-    dehydrateOptions:undefined,
-});*/
 
 ReactDOM.render(
     <PersistQueryClientProvider client={queryClient} persistOptions={{persister}}>

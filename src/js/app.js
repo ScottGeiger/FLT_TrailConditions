@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { onlineManager } from '@tanstack/react-query';
 import { format } from "date-fns";
-import { Container, Nav, Row, Col, Form } from "react-bootstrap";
+import { Container, Nav, Row, Col, Form, Alert } from "react-bootstrap";
 import { useMapQueries } from "./queries";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { groupBy, orderBy, snakeCase, camelCase } from "lodash";
-import { Link, scroller, animateScroll as scroll } from "react-scroll";
+import { Link, scroller } from "react-scroll";
 import htmr from "htmr";
 import { Icon } from '@iconify/react';
 
@@ -135,22 +135,15 @@ export default function App() {
     useEffect(() => {
         if (!mapNotices||!headerRef.current) return;
         if (window.location.hash) {
-            //doesn't work.  When mapNotices is refreshed old location remains.
             console.log(window.location);
             const offset = (headerRef.current.offsetHeight+10)*-1;
             scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{duration:1500,smooth:'easeInOutQuad',delay:0,offset:offset});
         }
     },[window.location,mapNotices,headerRef]);
-    useEffect(() => {
-        if (!notices.data) return;
-        console.log('notices loaded');
-        //persistQueryClientSave();
-    },[notices]);
     return (
         <Container as="main" className="mt-3" fluid>
-            {(maps.isLoading||notices.isLoading) && <p>Loading...</p>}
-            {!isOnline && <p>offline!</p>}
-            {((maps.isError||notices.isError)&&isOnline) && <p>Error Loading!</p>}
+            {(maps.isLoading||notices.isLoading) && <Loading/>}
+            {((maps.isError||notices.isError)&&isOnline) && <LoadingError/>}
             {(maps.data&&notices.data) && 
                 <>
                     <div ref={headerRef} id="sticky-header">
@@ -167,13 +160,46 @@ export default function App() {
     );
 }
 
+function Loading() {
+    return (
+        <Row>
+            <Col>
+                <Alert variant="secondary">
+                    <div className="d-flex flex-row justify-content-center align-items-center">
+                        <div className="p-2">
+                            <div className="spinner-border" role="status"></div>
+                        </div>
+                        <div className="p-2">
+                            <p className="mb-0">Loading Notices...</p>
+                        </div>
+                    </div>
+                </Alert>
+            </Col>
+        </Row>
+    );
+}
+
+function LoadingError() {
+    return (
+        <Row>
+            <Col>
+                <Alert variant="danger">
+                    <div className="d-flex flex-row justify-content-center align-items-center">
+                        <div className="p-1">
+                            <Icon icon="akar-icons:triangle-alert" width="30" height="30"/>
+                        </div>
+                        <div className="p-1">
+                            <p className="mb-0">Error Loading Notices</p>
+                        </div>
+                    </div>
+                </Alert>
+            </Col>
+        </Row>
+    );
+}
+
 function NavHeader({mapNotices,filterNotices,headerRef}) {
     const [offset,setOffset] = useState(0);
-
-    const handleClick = e => {
-        e.preventDefault();
-        window.history.replaceState({},'',e.target.href);
-    }
 
     const calculateDuration = d => {
         console.log(d);
@@ -214,7 +240,7 @@ function NavHeader({mapNotices,filterNotices,headerRef}) {
             <Nav>
                 {mapNotices.map((m,i) => (
                     <Nav.Item key={m.tm_id}>
-                        <Nav.Link as={Link} href={`#${m.tm_name}`} to={`${m.mapNameSC}`} className={getClassName(i)} activeClass="active" smooth={true} spy={true} onClick={handleClick} delay={0} duration={2000} offset={offset} disabled={isDisabled(i)}>{m.tm_name}</Nav.Link>
+                        <Nav.Link as={Link} href={`#${m.tm_name}`} to={`${m.tm_name}`} className={getClassName(i)} activeClass="active" smooth={true} spy={true} hashSpy={true} delay={0} duration={2000} offset={offset} disabled={isDisabled(i)}>{m.tm_name}</Nav.Link>
                     </Nav.Item>
                 ))}
             </Nav>
@@ -266,7 +292,7 @@ function Notices({mapNotices,filterNotices,sortBy,headerRef}) {
                 if (!m.show) return null;
                 if (filterNotices && !m.notices?.some(n=>n.show)) return null;
                 return (
-                    <section key={m.tm_id} id={m.mapNameSC} name={m.mapNameSC} className="mt-2">
+                    <section key={m.tm_id} id={m.mapNameSC} name={m.tm_name} className="mt-2">
                         <NoticeHeader map={m}/>
                         <NoticeDetails notices={m.notices}/>
                     </section>
@@ -325,110 +351,6 @@ function NoticeDetails({notices}) {
     );
 }
 
-/*
-function NoticesOLD({mapNotices,showArchived}) {
-    return (
-        <div id="notice-grid" className="border rounded mb-5">
-            {Object.keys(mapNotices).map(k=>{
-                const m = mapNotices?.[k];
-                if (!m.show) return null;
-                return (
-                    <section key={m.tm_id} id={m.tm_id} className="mt-2">
-                        <NoticesHeader map={m} count={m.display_count}/>
-                        <NoticeDetails map={m} showArchived={showArchived}/>
-                    </section>
-                )
-            })}
-        </div>
-    );
-}
-*/
-/*
-            {maps.map(m=>{
-                const count = notices?.[m.tm_id]?.length||0;
-                return (
-                    <section key={m.tm_id} id={m.tm_id} className="mt-2">
-                        <NoticesHeader map={m} count={count}/>
-                        <NoticeDetails mapName={m.tm_name} mapNotices={notices?.[m.tm_id]}/>
-                    </section>
-                );
-            })}
-
-*/
-
-/*
-function NoticesHeader({map,count}) {
-    return (
-        <header className="mx-2 p-2 rounded-top">
-            <Row>
-                <Col xs={12} className="text-center">{map.tm_name}{map.tm_location && <small> - {map.tm_location}</small>}</Col>
-            </Row>
-            <Row>
-                <Col xs={6}>Revised: <FormatDate>{map.tm_revision}</FormatDate></Col>
-                <Col xs={6} className="text-end">Count: {count}</Col>
-            </Row>
-        </header>
-    );
-}
-
-function NoticeDetails({map,showArchived}) {
-    return (
-        <>
-            {map.tm_Notices && map.tm_Notices.map(n => {
-                if (!showArchived && n.expired) return null;
-                let cName = "mx-2";
-                if (n.tn_RevNotice!="0") cName += " bg-danger bg-opacity-50";
-                if (n.expired) cName += " bg-secondary bg-opacity-50 expired";
-                return (
-                    <Row key={n.tn_id} as="article" id={`notice_id-${n.tn_id}`} className={cName}>
-                        <Col md={3} className="border border-top-0 border-secondary p-2">
-                            <p className="mb-0">{map?.tm_name}</p>
-                            <p className="mb-0"><FormatDate>{n.tn_Date}</FormatDate></p>
-                            {n.tn_RevNotice!="0" && <p className="mb-0 text-danger"><strong>Map Revision</strong></p>}
-                            {n.expired && <p className="mb-0 text-danger"><strong>EXPIRED!</strong></p>}
-                        </Col>
-                        <Col md={9} className="border border-top-0 border-secondary p-2">
-                            <NoticeBody notice={n}/>
-                        </Col>
-                    </Row>
-                );
-            })}
-        </>
-    );
-}
-
-function NoticeDetailsOLD({mapName,mapNotices}) {
-    return (
-        <>
-            {mapNotices && (mapNotices?.length==0)?
-                <Row as="article" className="border border-top-0 mx-2 py-2 bg-secondary bg-opacity-50">
-                    <Col><p className="fst-italic mb-0 text-center">No Current Notices</p></Col>
-                </Row>:
-                <>
-                    {mapNotices && mapNotices.map(n => {
-                        let cName = "mx-2";
-                        if (n.tn_RevNotice!="0") cName += " bg-danger bg-opacity-50";
-                        if (n.expired) cName += " bg-secondary bg-opacity-50 expired";
-                        return (
-                            <Row key={n.tn_id} as="article" id={`notice_id-${n.tn_id}`} className={cName}>
-                                <Col md={3} className="border border-top-0 border-secondary p-2">
-                                    <p className="mb-0">{mapName}</p>
-                                    <p className="mb-0"><FormatDate>{n.tn_Date}</FormatDate></p>
-                                    {n.tn_RevNotice!="0" && <p className="mb-0 text-danger"><strong>Map Revision</strong></p>}
-                                    {n.expired && <p className="mb-0 text-danger"><strong>EXPIRED!</strong></p>}
-                                </Col>
-                                <Col md={9} className="border border-top-0 border-secondary p-2">
-                                    <NoticeBody notice={n}/>
-                                </Col>
-                            </Row>
-                        );
-                    })}
-                </>
-            }
-        </>
-    );
-}
-*/
 //make callback or memoize?
 function NoticeBody({notice}) {
     const parseHTML = () => {
