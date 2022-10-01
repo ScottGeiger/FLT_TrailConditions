@@ -4,13 +4,21 @@ import { format } from "date-fns";
 import { Container, Nav, Row, Col, Form, Button } from "react-bootstrap";
 import { useMapQueries } from "./queries";
 import { useSearchParams } from "react-router-dom";
-import { groupBy, orderBy, snakeCase, camelCase } from "lodash";
+import { groupBy, orderBy, snakeCase } from "lodash";
 import { Link, scroller } from "react-scroll";
 import htmr from "htmr";
 import { Icon } from '@iconify/react';
 import { Loading, LoadingError } from "./utils";
 
 const mailtoBody = 'For the latest information about trail conditions visit https://fingerlakestrail.org/trailconditions';
+
+const nonMapList = [
+    {name:'all_closures',title:'All Closures'},
+    {name:'hunting_closures',title:'Hunting Closures'},
+    {name:'nonhunting_closures',title:'Non-Hunting Closures'},
+    {name:'map_revisions',title:'Map Revisions'},
+    {name:'temp_notices',title:'Temporary Notices'}
+];
 
 const FormatDate = React.memo(({fmt,children}) => {
     const dt = (!children)?new Date():new Date(children*1000);
@@ -34,28 +42,25 @@ export default function App() {
         const val = Object.values(action).at(0);
         const obj = {...state};
         if (obj.hasOwnProperty(key)) obj[key] = val;
-        let params = {sortBy:obj.sortBy,archive:(obj.archive)?'old':'new'};
-        if (obj.showMap.type == 'map' && maps.data) {
-            const name = maps.data.find(m=>m.tm_id==obj.showMap.map)?.tm_name;
-            if (name) params.showMap = name;
+        if (obj.showMap.name && !obj.showMap.map) {
+            if (maps.data) {
+                const lmap = maps.data.find(m=>m.tm_name.replaceAll('/','_')==obj.showMap.name);
+                if (lmap) {
+                    obj.showMap = {type:'map',map:lmap.tm_id,name:lmap.tm_name};
+                } else {
+                    const nonmap = nonMapList.find(nm=>nm.name==obj.showMap.name);
+                    if (nonmap) obj.showMap = {type:'non-map',map:nonmap.name,name:nonmap.name};
+                }
+            }
         }
-        if (!obj.init) setSearchParams(params);
-        obj.init = false;
         return obj;
-    },{showMap:{type:'map',map:''},archive:false,sortBy:'map',isAdmin:false,init:true});
-
-    /*const handleChangeFilter = e => {
-        console.log(e);
-        console.log(e.target.options[e.target.options.selectedIndex]);
-        const type = e.target.options[e.target.options.selectedIndex].dataset?.type;
-        if (type == 'map') {
-            setShowMap(e.target.value);
-            setFilterNotices('');
-        } else {
-            setShowMap('');
-            setFilterNotices(e.target.value);
-        }
-    }*/
+    },{
+        showMap:{type:'map',map:'',name:searchParams.get('show')||''},
+        archive:searchParams.get('archive')=='old',
+        sortBy:searchParams.get('sortBy')||'map',
+        hideNav:searchParams.has('hidenav'),
+        isAdmin:false
+    });
 
     const mapNotices = useMemo(() => {
         if (!maps.data||!notices.data) return [];
@@ -133,13 +138,13 @@ export default function App() {
                     notices:tn[m.tm_id]
                 });
             });
-            console.log(tm);
+            //console.debug(tm);
             setDisplayTotal(tm.map(m=>m.display_count).reduce((a,b)=>a+b));
             return tm;
         } else {
             const tn = orderBy(notices.data,['tn_Date'],['desc']);            
             tn.forEach(process_notice);
-            console.log(tn);
+            //console.debug(tn);
             return tn;
         }
     },[maps.data,notices.data,noticeFilters]);
@@ -148,20 +153,32 @@ export default function App() {
         if (!mapNotices||!headerRef.current) return;
         if (window.location.hash) {
             const offset = (headerRef.current.offsetHeight)*-1;
-            console.log(offset);
             scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{duration:1500,smooth:'true',delay:0,offset:offset});
         }
     },[window.location,mapNotices,headerRef]);
+    useEffect(()=>{
+        let params = {};
+        if (noticeFilters.showMap.map) {
+            params = {show:noticeFilters.showMap.name.replaceAll('/','_')};
+        } else {
+            params = {sortBy:noticeFilters.sortBy,archive:(!noticeFilters.archive)?'new':'old'};
+        }
+        if (noticeFilters.hideNav) params.hidenav = noticeFilters.hideNav;
+        console.log(params);
+        setSearchParams(params);
+    },[noticeFilters]);
     return (
         <Container as="main" className="mt-3" fluid>
             {(maps.isLoading||notices.isLoading) && <Loading/>}
             {((maps.isError||notices.isError)&&isOnline) && <LoadingError/>}
             {(maps.data&&notices.data) && 
                 <>
-                    <div ref={headerRef} id="sticky-header">
-                        {noticeFilters.sortBy=='map' && <NavHeader mapNotices={mapNotices} noticeFilters={noticeFilters} headerRef={headerRef}/>}
-                        <NoticeFilter maps={maps.data} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
-                    </div>
+                    {!noticeFilters.hideNav &&
+                        <div ref={headerRef} id="sticky-header">
+                            {noticeFilters.sortBy=='map' && <NavHeader mapNotices={mapNotices} noticeFilters={noticeFilters} headerRef={headerRef}/>}
+                            <NoticeFilter maps={maps.data} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
+                        </div>
+                    }
                     <Row className="mx-2 mb-1">
                         {noticeFilters.isAdmin && 
                             <Col className="p-0">
@@ -179,11 +196,6 @@ export default function App() {
 
 function NavHeader({mapNotices,noticeFilters,headerRef}) {
     const [offset,setOffset] = useState(0);
-
-    const calculateDuration = d => {
-        console.log(d);
-        return Math.abs(d);
-    }
 
     //TODO: Move to mapNotices object build above
     const getClassName = useCallback(i => {
@@ -204,7 +216,6 @@ function NavHeader({mapNotices,noticeFilters,headerRef}) {
     useEffect(() => {
         if (!headerRef.current) return;
         const offset = (headerRef.current.offsetHeight+50)*-1;
-        console.log(offset);
         setOffset(offset);
     },[headerRef]);
     return (
@@ -231,8 +242,8 @@ function NavHeader({mapNotices,noticeFilters,headerRef}) {
 
 function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
     const showMapRef = useRef();
-    const [showArchived,setShowArchived] = useState(false);
-    const [sortBy,setSortBy] = useState('map');
+    const [showArchived,setShowArchived] = useState(noticeFilters.archive);
+    const [sortBy,setSortBy] = useState(noticeFilters.sortBy);
     const handleChange = e => {
         switch(e.target.name) {
             case "showMap":
@@ -257,27 +268,25 @@ function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
                         <Form.Label column xs="auto">Show: </Form.Label>
                         <Col xs="auto">
                             <Form.Select ref={showMapRef} aria-label="Show only selected" name="showMap" value={JSON.stringify(noticeFilters.showMap)} onChange={handleChange} disabled={sortBy=='date'}>
-                                <option value='{"type":"map","map":""}'>All Notices</option>
-                                <option value='{"type":"non-map","map":"all_closures"}'>All Closures</option>
-                                <option value='{"type":"non-map","map":"hunting_closures"}'>Hunting Closures</option>
-                                <option value='{"type":"non-map","map":"nonhunting_closures"}'>Non-Hunting Closures</option>
-                                <option value='{"type":"non-map","map":"map_revisions"}'>Map Revisions</option>
-                                <option value='{"type":"non-map","map":"temp_notices"}'>Temporary Notices</option>
+                                <option value={JSON.stringify({type:'map',map:'',name:''})}>All Notices</option>
+                                {nonMapList.map(nm=><option key={nm.name} value={JSON.stringify({type:'non-map',map:nm.name,name:nm.name})}>{nm.title}</option>)}
                                 <option disabled value="">-----</option>
-                                {maps.map(m=><option key={m.tm_id} value={`{"type":"map","map":"${m.tm_id}"}`}>{m.tm_name}</option>)}
+                                {maps.map(m=><option key={m.tm_id} value={JSON.stringify({type:'map',map:m.tm_id,name:m.tm_name})}>{m.tm_name}</option>)}
                             </Form.Select>
                         </Col>
                         <Col xs="auto">
                             <Form.Check type="switch" name="archived" label="Archived" checked={showArchived} onChange={handleChange}/>
                         </Col>
                     </Form.Group>
-                    <Form.Group as={Row} className="d-flex align-items-center">
-                        <Form.Label column xs="auto">Sort By: </Form.Label>
-                        <Col xs="auto">
-                            <Form.Check type="radio" name="sortBy" label="Map" value="map" inline checked={sortBy=='map'} onChange={handleChange}/>
-                            <Form.Check type="radio" name="sortBy" label="Date" value="date" inline checked={sortBy=='date'} onChange={handleChange}/>
-                        </Col>
-                    </Form.Group>
+                    {!noticeFilters.showMap.map && 
+                        <Form.Group as={Row} className="d-flex align-items-center">
+                            <Form.Label column xs="auto">Sort By: </Form.Label>
+                            <Col xs="auto">
+                                <Form.Check type="radio" name="sortBy" label="Map" value="map" inline checked={sortBy=='map'} onChange={handleChange}/>
+                                <Form.Check type="radio" name="sortBy" label="Date" value="date" inline checked={sortBy=='date'} onChange={handleChange}/>
+                            </Col>
+                        </Form.Group>
+                    }
                 </div>
             </Form>
         </section>
@@ -286,7 +295,6 @@ function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
 
 function Notices({mapNotices,noticeFilters,setNoticeFilters}) {
     const handleAdminButtons = useCallback((action,tn_id) => {
-        console.log(action,tn_id);
         if (action == 'edit') window.open(`https://fingerlakestrail.org/FLTC/editnotices.php?noticeid=${tn_id}`,'EditNotice','top=100,left=100,width=600,height=740,resizable,scrollbars,status=0');
     },[mapNotices,noticeFilters]);
     return (
