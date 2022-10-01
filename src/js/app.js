@@ -1,37 +1,50 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback, useReducer, useLayoutEffect } from "react";
 import { onlineManager } from '@tanstack/react-query';
 import { format } from "date-fns";
-import { Container, Nav, Row, Col, Form, Alert } from "react-bootstrap";
+import { Container, Nav, Row, Col, Form, Button } from "react-bootstrap";
 import { useMapQueries } from "./queries";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { groupBy, orderBy, snakeCase, camelCase } from "lodash";
 import { Link, scroller } from "react-scroll";
 import htmr from "htmr";
 import { Icon } from '@iconify/react';
+import { Loading, LoadingError } from "./utils";
+
+const mailtoBody = 'For the latest information about trail conditions visit https://fingerlakestrail.org/trailconditions';
 
 const FormatDate = React.memo(({fmt,children}) => {
     const dt = (!children)?new Date():new Date(children*1000);
     return (!fmt)?format(dt,'PP'):format(dt,fmt);
 });
 
-
 export default function App() {
     const [searchParams,setSearchParams] = useSearchParams();
 
-    const [showMap,setShowMap] = useState('');
-    const [filterNotices,setFilterNotices] = useState('');
-    const [showArchived,setShowArchived] = useState(false);
-    const [sortBy,setSortBy] = useState('map');
     const [displayTotal,setDisplayTotal] = useState(0);
     const headerRef = useRef();
 
     const isOnline = onlineManager.isOnline();
-    const {getMaps,getNotices} = useMapQueries();
+    const {getSession,getMaps,getNotices} = useMapQueries();
+    const session = getSession({onSuccess:d => setNoticeFilters({isAdmin:!!d?.login_array?.aid})});
     const maps = getMaps();
     const notices = getNotices({enabled:!!maps.data});
 
-    //reducer? or callback?
-    const handleChangeFilter = e => {
+    const [noticeFilters,setNoticeFilters] = useReducer((state,action) => {
+        const key = Object.keys(action).at(0);
+        const val = Object.values(action).at(0);
+        const obj = {...state};
+        if (obj.hasOwnProperty(key)) obj[key] = val;
+        let params = {sortBy:obj.sortBy,archive:(obj.archive)?'old':'new'};
+        if (obj.showMap.type == 'map' && maps.data) {
+            const name = maps.data.find(m=>m.tm_id==obj.showMap.map)?.tm_name;
+            if (name) params.showMap = name;
+        }
+        if (!obj.init) setSearchParams(params);
+        obj.init = false;
+        return obj;
+    },{showMap:{type:'map',map:''},archive:false,sortBy:'map',isAdmin:false,init:true});
+
+    /*const handleChangeFilter = e => {
         console.log(e);
         console.log(e.target.options[e.target.options.selectedIndex]);
         const type = e.target.options[e.target.options.selectedIndex].dataset?.type;
@@ -42,7 +55,7 @@ export default function App() {
             setShowMap('');
             setFilterNotices(e.target.value);
         }
-    }
+    }*/
 
     const mapNotices = useMemo(() => {
         if (!maps.data||!notices.data) return [];
@@ -71,15 +84,14 @@ export default function App() {
             if (notice.tn_RevNotice == "1") closure_text = "Map Revision";
             notice.closure_text = closure_text;
 
-            let s = (!notice.expired||(notice.expired&&showArchived));
+            let s = (!notice.expired||(notice.expired&&noticeFilters.archive));
             let show = false;
-            if (filterNotices && s) {
-                //if (filterNotices == 'all_closures' && notice_type && notice_type != 'Map Revision') show = true;
-                if (filterNotices == 'all_closures' && notice.is_closure) show = true;
-                if (filterNotices == 'hunting_closures' && notice_type == 'Hunting Closure') show = true;
-                if (filterNotices == 'nonhunting_closures' && notice_type == 'Non-Hunting Closure') show = true;
-                if (filterNotices == 'map_revisions' && notice_type == 'Map Revision') show = true;
-                if (filterNotices == 'temp_notices' && notice_type == 'Temporary Notice') show = true;    
+            if (noticeFilters.showMap.type == 'non-map' && s) {
+                if (noticeFilters.showMap.map == 'all_closures' && notice.is_closure) show = true;
+                if (noticeFilters.showMap.map == 'hunting_closures' && notice_type == 'Hunting Closure') show = true;
+                if (noticeFilters.showMap.map == 'nonhunting_closures' && notice_type == 'Non-Hunting Closure') show = true;
+                if (noticeFilters.showMap.map == 'map_revisions' && notice_type == 'Map Revision') show = true;
+                if (noticeFilters.showMap.map == 'temp_notices' && notice_type == 'Temporary Notice') show = true;    
             } else {
                 show = s;
             }
@@ -88,11 +100,11 @@ export default function App() {
             return notice;
         }
 
-        if (sortBy == 'map') {
+        if (noticeFilters.sortBy == 'map') {
             const tn = groupBy(orderBy(notices.data,['tn_Date'],['desc']),'tn_tmid');
             const tm = [];
             maps.data.forEach(m => {
-                let show = (showMap)?(m.tm_id==showMap):true;
+                let show = (noticeFilters.showMap.type=='map'&&noticeFilters.showMap.map)?(m.tm_id==noticeFilters.showMap.map):true;
                 let active_notices = 0;
                 let active_closures = 0;
                 let total_notices = 0;//do we need this?
@@ -104,15 +116,20 @@ export default function App() {
                     if (n.show) display_count++;
                     total_notices++;
                 });
+                const adj = [];
+                m.tm_adjacent.split(',').map(a=>{
+                    const id = maps.data.find(b=>b.tm_name==a.trim())?.tm_id;
+                    adj.push({id:id,name:a.trim()})
+                });
                 tm.push({
                     ...m,
                     show:show,
                     mapNameSC:snakeCase(m.tm_name),
-                    mapNameCC:camelCase(m.tm_name),
                     active_notices:active_notices,
                     active_closures:active_closures,
                     total_notices:total_notices,
                     display_count:display_count,
+                    adjacentMaps:adj,
                     notices:tn[m.tm_id]
                 });
             });
@@ -125,19 +142,14 @@ export default function App() {
             console.log(tn);
             return tn;
         }
-    },[maps.data,notices.data,showMap,filterNotices,showArchived,sortBy]);
+    },[maps.data,notices.data,noticeFilters]);
 
-    useEffect(()=>{
-        setSortBy(searchParams.get('sortBy')=='date'?'date':'map');
-        setShowArchived(searchParams.get('archive')=='old');
-        searchParams.get('show')&&setShowMap(searchParams.get('show'));
-    },[searchParams]);
     useEffect(() => {
         if (!mapNotices||!headerRef.current) return;
         if (window.location.hash) {
-            console.log(window.location);
-            const offset = (headerRef.current.offsetHeight+10)*-1;
-            scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{duration:1500,smooth:'easeInOutQuad',delay:0,offset:offset});
+            const offset = (headerRef.current.offsetHeight)*-1;
+            console.log(offset);
+            scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{duration:1500,smooth:'true',delay:0,offset:offset});
         }
     },[window.location,mapNotices,headerRef]);
     return (
@@ -147,58 +159,25 @@ export default function App() {
             {(maps.data&&notices.data) && 
                 <>
                     <div ref={headerRef} id="sticky-header">
-                        {sortBy=='map' && <NavHeader mapNotices={mapNotices} filterNotices={filterNotices} headerRef={headerRef}/>}
-                        <NoticeFilter maps={maps.data} handleChangeFilter={handleChangeFilter} sortBy={sortBy} setSortBy={setSortBy} showArchived={showArchived} setShowArchived={setShowArchived}/>
+                        {noticeFilters.sortBy=='map' && <NavHeader mapNotices={mapNotices} noticeFilters={noticeFilters} headerRef={headerRef}/>}
+                        <NoticeFilter maps={maps.data} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
                     </div>
                     <Row className="mx-2 mb-1">
-                        <Col className="p-0 text-end">Notices Displayed: {displayTotal}</Col>
+                        {noticeFilters.isAdmin && 
+                            <Col className="p-0">
+                                <Button variant="success"><Icon icon="akar-icons:plus" className="pb-1" width="24" height="24"/>Add New Notice</Button>
+                            </Col>
+                        }
+                        <Col className="p-0 text-end align-self-end">Notices Displayed: {displayTotal}</Col>
                     </Row>
-                    <Notices mapNotices={mapNotices} filterNotices={filterNotices} sortBy={sortBy} headerRef={headerRef}/>
+                    <Notices mapNotices={mapNotices} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
                 </>
             }
         </Container>
     );
 }
 
-function Loading() {
-    return (
-        <Row>
-            <Col>
-                <Alert variant="secondary">
-                    <div className="d-flex flex-row justify-content-center align-items-center">
-                        <div className="p-2">
-                            <div className="spinner-border" role="status"></div>
-                        </div>
-                        <div className="p-2">
-                            <p className="mb-0">Loading Notices...</p>
-                        </div>
-                    </div>
-                </Alert>
-            </Col>
-        </Row>
-    );
-}
-
-function LoadingError() {
-    return (
-        <Row>
-            <Col>
-                <Alert variant="danger">
-                    <div className="d-flex flex-row justify-content-center align-items-center">
-                        <div className="p-1">
-                            <Icon icon="akar-icons:triangle-alert" width="30" height="30"/>
-                        </div>
-                        <div className="p-1">
-                            <p className="mb-0">Error Loading Notices</p>
-                        </div>
-                    </div>
-                </Alert>
-            </Col>
-        </Row>
-    );
-}
-
-function NavHeader({mapNotices,filterNotices,headerRef}) {
+function NavHeader({mapNotices,noticeFilters,headerRef}) {
     const [offset,setOffset] = useState(0);
 
     const calculateDuration = d => {
@@ -206,7 +185,7 @@ function NavHeader({mapNotices,filterNotices,headerRef}) {
         return Math.abs(d);
     }
 
-    //Move to mapNotices object build above? yes
+    //TODO: Move to mapNotices object build above
     const getClassName = useCallback(i => {
         if (!mapNotices) return '';
         const disabled = isDisabled(i);
@@ -219,12 +198,14 @@ function NavHeader({mapNotices,filterNotices,headerRef}) {
     },[mapNotices]);
 
     const isDisabled = useCallback(i => {
-        return (filterNotices && !mapNotices[i].display_count)?true:!mapNotices[i].show;
-    },[mapNotices,filterNotices]);
+        return (noticeFilters.showMap.type=='non-map' && !mapNotices[i].display_count)?true:!mapNotices[i].show;
+    },[mapNotices,noticeFilters]);
 
-    useEffect(()=>{
+    useEffect(() => {
         if (!headerRef.current) return;
-        setOffset(((headerRef.current.offsetHeight||0)+10)*-1);
+        const offset = (headerRef.current.offsetHeight+50)*-1;
+        console.log(offset);
+        setOffset(offset);
     },[headerRef]);
     return (
         <section className="border rounded p-2 my-3 d-none d-sm-none d-md-block">
@@ -240,7 +221,7 @@ function NavHeader({mapNotices,filterNotices,headerRef}) {
             <Nav>
                 {mapNotices.map((m,i) => (
                     <Nav.Item key={m.tm_id}>
-                        <Nav.Link as={Link} href={`#${m.tm_name}`} to={`${m.tm_name}`} className={getClassName(i)} activeClass="active" smooth={true} spy={true} hashSpy={true} delay={0} duration={2000} offset={offset} disabled={isDisabled(i)}>{m.tm_name}</Nav.Link>
+                        <Nav.Link as={Link} href={`#${m.tm_name}`} to={`${m.tm_name}`} className={getClassName(i)} activeClass="highlight" smooth={true} spy={true} hashSpy={true} delay={0} duration={2000} offset={offset} disabled={isDisabled(i)}>{m.tm_name}</Nav.Link>
                     </Nav.Item>
                 ))}
             </Nav>
@@ -248,7 +229,26 @@ function NavHeader({mapNotices,filterNotices,headerRef}) {
     );
 }
 
-function NoticeFilter({maps,handleChangeFilter,sortBy,setSortBy,showArchived,setShowArchived}) {
+function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
+    const showMapRef = useRef();
+    const [showArchived,setShowArchived] = useState(false);
+    const [sortBy,setSortBy] = useState('map');
+    const handleChange = e => {
+        switch(e.target.name) {
+            case "showMap":
+                const obj = JSON.parse(e.target.value);
+                setNoticeFilters({showMap:obj});
+                break;
+            case "archived":
+                setShowArchived(e.target.checked);
+                setNoticeFilters({archive:e.target.checked});
+                break;
+            case "sortBy":
+                setSortBy(e.target.value);
+                setNoticeFilters({sortBy:e.target.value});
+                break;
+        }
+    }
     return (
         <section className="border rounded p-2 my-3">
             <Form>
@@ -256,26 +256,26 @@ function NoticeFilter({maps,handleChangeFilter,sortBy,setSortBy,showArchived,set
                     <Form.Group as={Row} className="d-flex align-items-center">
                         <Form.Label column xs="auto">Show: </Form.Label>
                         <Col xs="auto">
-                            <Form.Select aria-label="Show only selected" onChange={handleChangeFilter} disabled={sortBy=='date'}>
-                                <option value="">All Notices</option>
-                                <option data-type="non-map" value="all_closures">All Closures</option>
-                                <option data-type="non-map" value="hunting_closures">Hunting Closures</option>
-                                <option data-type="non-map" value="nonhunting_closures">Non-Hunting Closures</option>
-                                <option data-type="non-map" value="map_revisions">Map Revisions</option>
-                                <option data-type="non-map" value="temp_notices">Temporary Notices</option>
+                            <Form.Select ref={showMapRef} aria-label="Show only selected" name="showMap" value={JSON.stringify(noticeFilters.showMap)} onChange={handleChange} disabled={sortBy=='date'}>
+                                <option value='{"type":"map","map":""}'>All Notices</option>
+                                <option value='{"type":"non-map","map":"all_closures"}'>All Closures</option>
+                                <option value='{"type":"non-map","map":"hunting_closures"}'>Hunting Closures</option>
+                                <option value='{"type":"non-map","map":"nonhunting_closures"}'>Non-Hunting Closures</option>
+                                <option value='{"type":"non-map","map":"map_revisions"}'>Map Revisions</option>
+                                <option value='{"type":"non-map","map":"temp_notices"}'>Temporary Notices</option>
                                 <option disabled value="">-----</option>
-                                {maps.map(m=><option key={m.tm_id} data-type="map" value={m.tm_id}>{m.tm_name}</option>)}
+                                {maps.map(m=><option key={m.tm_id} value={`{"type":"map","map":"${m.tm_id}"}`}>{m.tm_name}</option>)}
                             </Form.Select>
                         </Col>
                         <Col xs="auto">
-                            <Form.Check type="switch" id="showArchived" label="Archived" checked={showArchived} onChange={()=>setShowArchived(!showArchived)}/>
+                            <Form.Check type="switch" name="archived" label="Archived" checked={showArchived} onChange={handleChange}/>
                         </Col>
                     </Form.Group>
                     <Form.Group as={Row} className="d-flex align-items-center">
                         <Form.Label column xs="auto">Sort By: </Form.Label>
                         <Col xs="auto">
-                            <Form.Check type="radio" name="radioShow" label="Map" value="map" inline checked={sortBy=='map'} onChange={e=>setSortBy('map')}/>
-                            <Form.Check type="radio" name="radioShow" label="Date" value="date" inline checked={sortBy=='date'} onChange={e=>setSortBy('date')}/>
+                            <Form.Check type="radio" name="sortBy" label="Map" value="map" inline checked={sortBy=='map'} onChange={handleChange}/>
+                            <Form.Check type="radio" name="sortBy" label="Date" value="date" inline checked={sortBy=='date'} onChange={handleChange}/>
                         </Col>
                     </Form.Group>
                 </div>
@@ -284,26 +284,29 @@ function NoticeFilter({maps,handleChangeFilter,sortBy,setSortBy,showArchived,set
     );
 }
 
-function Notices({mapNotices,filterNotices,sortBy,headerRef}) {
-    const location = useLocation();
+function Notices({mapNotices,noticeFilters,setNoticeFilters}) {
+    const handleAdminButtons = useCallback((action,tn_id) => {
+        console.log(action,tn_id);
+        if (action == 'edit') window.open(`https://fingerlakestrail.org/FLTC/editnotices.php?noticeid=${tn_id}`,'EditNotice','top=100,left=100,width=600,height=740,resizable,scrollbars,status=0');
+    },[mapNotices,noticeFilters]);
     return (
-        <section id="notice-grid" className="border rounded mb-5">
-            {sortBy=='map' && mapNotices.map(m => {
+        <section id="notice-grid" className={`border rounded mb-5 ${(noticeFilters.sortBy=='date')?'pt-2':''}`}>
+            {noticeFilters.sortBy=='map' && mapNotices.map(m => {
                 if (!m.show) return null;
-                if (filterNotices && !m.notices?.some(n=>n.show)) return null;
+                if (noticeFilters.showMap.type=='non-map' && !m.notices?.some(n=>n.show)) return null;
                 return (
                     <section key={m.tm_id} id={m.mapNameSC} name={m.tm_name} className="mt-2">
-                        <NoticeHeader map={m}/>
-                        <NoticeDetails notices={m.notices}/>
+                        <NoticeHeader map={m} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
+                        <NoticeDetails notices={m.notices} isAdmin={noticeFilters.isAdmin} handleAdminButtons={handleAdminButtons}/>
                     </section>
                 );
             })}
-            {sortBy=='date' && <NoticeDetails notices={mapNotices}/>}
+            {noticeFilters.sortBy=='date' && <NoticeDetails notices={mapNotices} isAdmin={noticeFilters.isAdmin} handleAdminButtons={handleAdminButtons}/>}
         </section>
     )
 }
 
-function NoticeHeader({map}) {
+function NoticeHeader({map,noticeFilters,setNoticeFilters}) {
     return (
         <header className="mx-2 p-2 rounded-top">
             <Row>
@@ -313,11 +316,19 @@ function NoticeHeader({map}) {
                 <Col xs={6}>Revised: <FormatDate>{map.tm_revision}</FormatDate></Col>
                 <Col xs={6} className="text-end">Count: {map.display_count}</Col>
             </Row>
+            {(noticeFilters.showMap.type=='map'&&noticeFilters.showMap.map!='') && 
+                <Row>
+                    <Col xs={12} className="text-center">Adjacent Maps: {map.adjacentMaps.map(a => {
+                        if (a.id) return <a key={a.name} className="me-2" style={{color:'#fff'}} onClick={()=>setNoticeFilters({showMap:{type:'map',map:a.id}})}>{a.name}</a>;
+                        return <span key={a.name} className="me-2">{a.name}</span>;
+                    })}</Col>
+                </Row>
+            }
         </header>
     );
 }
 
-function NoticeDetails({notices}) {
+function NoticeDetails({notices,isAdmin,handleAdminButtons}) {
     return (
         <>
             {notices && !notices.some(n=>n.show) && 
@@ -332,15 +343,20 @@ function NoticeDetails({notices}) {
                 let cName = "mx-2";
                 if (n.tn_RevNotice!="0") cName += " bg-danger bg-opacity-50";
                 if (n.expired) cName += " bg-secondary bg-opacity-50 expired";
+                const mailtoSubject = `Trail Condition Notice - ${n.mapName}`;
                 return (
                     <Row key={n.tn_id} as="article" id={`notice_id-${n.tn_id}`} className={cName}>
-                        <Col md={3} className="border border-top-0 border-secondary p-2">
+                        <Col md={3} className="border border-secondary p-2">
                             <p className="mb-0 fw-bold">{n.mapName}</p>
                             <p className="mb-0"><FormatDate>{n.tn_Date}</FormatDate></p>
                             {n.notice_type && <p className="mb-0 text-danger"><strong>{n.tn_tempNotice=="1"&&<Icon icon="mdi:alert"/>}{n.notice_type}</strong></p>}
                             {n.expired && <p className="mb-0 text-danger"><strong>EXPIRED!</strong></p>}
+                            {isAdmin && <div className="d-flex">
+                                <Button variant="warning" className="mt-2 me-2" onClick={()=>handleAdminButtons('edit',n.tn_id)}><Icon icon="akar-icons:edit" width="24" height="24" className="pb-1"/>Edit</Button>
+                                <Button variant="primary" className="mt-2" href={`mailto:hiking@fingerlakestrail.org?body=${mailtoBody}&subject=${mailtoSubject}`}><Icon icon="akar-icons:send" width="24" height="24" className="pb-1"/>Email</Button>
+                            </div>}
                         </Col>
-                        <Col md={9} className="border border-top-0 border-secondary p-2">
+                        <Col md={9} className="border border-secondary p-2">
                             {n.closure_text && <p className="text-danger"><strong>{n.tn_tempNotice=="1"&&<Icon icon="mdi:alert"/>}{n.closure_text}</strong></p>}
                             <NoticeBody notice={n}/>
                         </Col>

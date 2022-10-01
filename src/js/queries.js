@@ -29,6 +29,24 @@ export function useMapQueries() {
         const options = args[0]?.options||args[0]||{};
         return useQuery(['notices'],q('trailconditions'),options);
     }
+    const getSession = (...args) => {
+        const options = args[0]?.options||args[0]||{};
+        //return useQuery(['session'],q('session'),options);
+        if (!options?.staleTime) options.staleTime = 0;
+        if (!options?.cacheTime) options.cacheTime = 5 * 60 * 1000; // 5 minutes
+        return useQuery(['session'],()=>new Promise((res,rej)=>res({
+            "season": "summer",
+            "login_array": {
+                "aid": "69",
+                "name": "Scott Geiger",
+                "usr_email": "scott.geiger@fingerlakestrail.org",
+                "boardAccess": 1,
+                "adminAccess": 1,
+                "specialAccess": "ne,me,bdv,rtc,tax,nm,tmp",
+                "BOMAccess": "1"
+            }
+        })),options);
+    }
 
-    return {getMaps,getNotices};
+    return {getMaps,getNotices,getSession};
 }
