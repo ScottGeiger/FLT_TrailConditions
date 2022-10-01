@@ -13,11 +13,11 @@ import { Loading, LoadingError } from "./utils";
 const mailtoBody = 'For the latest information about trail conditions visit https://fingerlakestrail.org/trailconditions';
 
 const nonMapList = [
-    {name:'all_closures',title:'All Closures'},
-    {name:'hunting_closures',title:'Hunting Closures'},
-    {name:'nonhunting_closures',title:'Non-Hunting Closures'},
-    {name:'map_revisions',title:'Map Revisions'},
-    {name:'temp_notices',title:'Temporary Notices'}
+    {name:'closure',title:'All Closures'},
+    {name:'hunting',title:'Hunting Closures'},
+    {name:'non-hunting',title:'Non-Hunting Closures'},
+    {name:'rev-notice',title:'Map Revisions'},
+    {name:'temp-notice',title:'Temporary Notices'}
 ];
 
 const FormatDate = React.memo(({fmt,children}) => {
@@ -44,7 +44,7 @@ export default function App() {
         if (obj.hasOwnProperty(key)) obj[key] = val;
         if (obj.showMap.name && !obj.showMap.map) {
             if (maps.data) {
-                const lmap = maps.data.find(m=>m.tm_name.replaceAll('/','_')==obj.showMap.name);
+                const lmap = maps.data.find(m=>m.tm_name.replaceAll('/','_')==obj.showMap.name.replaceAll('/','_'));
                 if (lmap) {
                     obj.showMap = {type:'map',map:lmap.tm_id,name:lmap.tm_name};
                 } else {
@@ -53,6 +53,20 @@ export default function App() {
                 }
             }
         }
+
+        // set location history
+        let params = new URLSearchParams();
+        if (obj.showMap.map) {
+            params.set('show',obj.showMap.name.replaceAll('/','_'));
+        } else {
+            params.set('sortBy',obj.sortBy);
+            params.set('archive',(!obj.archive)?'new':'old');
+        }
+        if (obj.hideNav) params.set('hidenav',obj.hideNav);
+        let url = '?'+params.toString();
+        if (obj.sortBy=='map') url += window.location.hash;
+        if (url!=window.location.search) history.pushState(obj,'',url);
+
         return obj;
     },{
         showMap:{type:'map',map:'',name:searchParams.get('show')||''},
@@ -92,11 +106,11 @@ export default function App() {
             let s = (!notice.expired||(notice.expired&&noticeFilters.archive));
             let show = false;
             if (noticeFilters.showMap.type == 'non-map' && s) {
-                if (noticeFilters.showMap.map == 'all_closures' && notice.is_closure) show = true;
-                if (noticeFilters.showMap.map == 'hunting_closures' && notice_type == 'Hunting Closure') show = true;
-                if (noticeFilters.showMap.map == 'nonhunting_closures' && notice_type == 'Non-Hunting Closure') show = true;
-                if (noticeFilters.showMap.map == 'map_revisions' && notice_type == 'Map Revision') show = true;
-                if (noticeFilters.showMap.map == 'temp_notices' && notice_type == 'Temporary Notice') show = true;    
+                if (noticeFilters.showMap.map == 'closure' && notice.is_closure) show = true;
+                if (noticeFilters.showMap.map == 'hunting' && notice_type == 'Hunting Closure') show = true;
+                if (noticeFilters.showMap.map == 'non-hunting' && notice_type == 'Non-Hunting Closure') show = true;
+                if (noticeFilters.showMap.map == 'rev-notice' && notice_type == 'Map Revision') show = true;
+                if (noticeFilters.showMap.map == 'temp-notice' && notice_type == 'Temporary Notice') show = true;    
             } else {
                 show = s;
             }
@@ -153,20 +167,9 @@ export default function App() {
         if (!mapNotices||!headerRef.current) return;
         if (window.location.hash) {
             const offset = (headerRef.current.offsetHeight)*-1;
-            scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{duration:1500,smooth:'true',delay:0,offset:offset});
+            scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{smooth:'true',delay:0,offset:offset});
         }
     },[window.location,mapNotices,headerRef]);
-    useEffect(()=>{
-        let params = {};
-        if (noticeFilters.showMap.map) {
-            params = {show:noticeFilters.showMap.name.replaceAll('/','_')};
-        } else {
-            params = {sortBy:noticeFilters.sortBy,archive:(!noticeFilters.archive)?'new':'old'};
-        }
-        if (noticeFilters.hideNav) params.hidenav = noticeFilters.hideNav;
-        console.log(params);
-        setSearchParams(params);
-    },[noticeFilters]);
     return (
         <Container as="main" className="mt-3" fluid>
             {(maps.isLoading||notices.isLoading) && <Loading/>}
