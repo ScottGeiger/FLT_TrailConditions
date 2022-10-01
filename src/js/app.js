@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback, useReducer, useLayoutEffect } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback, useReducer } from "react";
 import { onlineManager } from '@tanstack/react-query';
 import { format } from "date-fns";
 import { Container, Nav, Row, Col, Form, Button } from "react-bootstrap";
 import { useMapQueries } from "./queries";
 import { useSearchParams } from "react-router-dom";
-import { groupBy, orderBy, snakeCase } from "lodash";
+import { groupBy, orderBy, snakeCase, startCase } from "lodash";
 import { Link, scroller } from "react-scroll";
 import htmr from "htmr";
 import { Icon } from '@iconify/react';
@@ -19,6 +19,8 @@ const nonMapList = [
     {name:'rev-notice',title:'Map Revisions'},
     {name:'temp-notice',title:'Temporary Notices'}
 ];
+
+const title = 'Trail Condition Notices';
 
 const FormatDate = React.memo(({fmt,children}) => {
     const dt = (!children)?new Date():new Date(children*1000);
@@ -46,30 +48,37 @@ export default function App() {
             if (maps.data) {
                 const lmap = maps.data.find(m=>m.tm_name.replaceAll('/','_')==obj.showMap.name.replaceAll('/','_'));
                 if (lmap) {
-                    obj.showMap = {type:'map',map:lmap.tm_id,name:lmap.tm_name};
+                    obj.showMap = {type:'map',map:lmap.tm_id,name:lmap.tm_name,title:lmap.tm_name};
                 } else {
                     const nonmap = nonMapList.find(nm=>nm.name==obj.showMap.name);
-                    if (nonmap) obj.showMap = {type:'non-map',map:nonmap.name,name:nonmap.name};
+                    if (nonmap) obj.showMap = {type:'non-map',map:nonmap.name,name:nonmap.name,title:nonmap.title};
                 }
             }
         }
 
         // set location history
         let params = new URLSearchParams();
+        let subtitle = '';
         if (obj.showMap.map) {
             params.set('show',obj.showMap.name.replaceAll('/','_'));
+            subtitle = obj.showMap.title;
         } else {
             params.set('sortBy',obj.sortBy);
             params.set('archive',(!obj.archive)?'new':'old');
+            subtitle = `Sorted By ${startCase(obj.sortBy)}`;
+            if (obj.archive) subtitle += ' [Archived]';
         }
         if (obj.hideNav) params.set('hidenav',obj.hideNav);
         let url = '?'+params.toString();
         if (obj.sortBy=='map') url += window.location.hash;
         if (url!=window.location.search) history.pushState(obj,'',url);
 
+        // change title
+        document.title = `${title} | ${subtitle}`;
+
         return obj;
     },{
-        showMap:{type:'map',map:'',name:searchParams.get('show')||''},
+        showMap:{type:'map',map:'',name:searchParams.get('show')||'',title:''},
         archive:searchParams.get('archive')=='old',
         sortBy:searchParams.get('sortBy')||'map',
         hideNav:searchParams.has('hidenav'),
@@ -271,10 +280,10 @@ function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
                         <Form.Label column xs="auto">Show: </Form.Label>
                         <Col xs="auto">
                             <Form.Select ref={showMapRef} aria-label="Show only selected" name="showMap" value={JSON.stringify(noticeFilters.showMap)} onChange={handleChange} disabled={sortBy=='date'}>
-                                <option value={JSON.stringify({type:'map',map:'',name:''})}>All Notices</option>
-                                {nonMapList.map(nm=><option key={nm.name} value={JSON.stringify({type:'non-map',map:nm.name,name:nm.name})}>{nm.title}</option>)}
+                                <option value={JSON.stringify({type:'map',map:'',name:'',title:''})}>All Notices</option>
+                                {nonMapList.map(nm=><option key={nm.name} value={JSON.stringify({type:'non-map',map:nm.name,name:nm.name,title:nm.title})}>{nm.title}</option>)}
                                 <option disabled value="">-----</option>
-                                {maps.map(m=><option key={m.tm_id} value={JSON.stringify({type:'map',map:m.tm_id,name:m.tm_name})}>{m.tm_name}</option>)}
+                                {maps.map(m=><option key={m.tm_id} value={JSON.stringify({type:'map',map:m.tm_id,name:m.tm_name,title:m.tm_name})}>{m.tm_name}</option>)}
                             </Form.Select>
                         </Col>
                         <Col xs="auto">
