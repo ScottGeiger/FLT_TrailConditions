@@ -78,3 +78,6 @@
     background-image: url('../images/expired.png');
     background-repeat: repeat;
 }
+
+/* Adjacent Map Links */
+.adjacent a { cursor: pointer;}

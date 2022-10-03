@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback, useReducer } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback, useReducer, useLayoutEffect } from "react";
 import { onlineManager } from '@tanstack/react-query';
 import { format } from "date-fns";
 import { Container, Nav, Row, Col, Form, Button } from "react-bootstrap";
@@ -70,7 +70,7 @@ export default function App() {
         }
         if (obj.hideNav) params.set('hidenav',obj.hideNav);
         let url = '?'+params.toString();
-        if (obj.sortBy=='map') url += window.location.hash;
+        if (obj.sortBy=='map'&&!obj.showMap.map) url += window.location.hash;
         if (url!=window.location.search) history.pushState(obj,'',url);
 
         // change title
@@ -78,7 +78,7 @@ export default function App() {
 
         return obj;
     },{
-        showMap:{type:'map',map:'',name:searchParams.get('show')||'',title:''},
+        showMap:{type:'',map:'',name:searchParams.get('show')||'',title:''},
         archive:searchParams.get('archive')=='old',
         sortBy:searchParams.get('sortBy')||'map',
         hideNav:searchParams.has('hidenav'),
@@ -172,6 +172,10 @@ export default function App() {
         }
     },[maps.data,notices.data,noticeFilters]);
 
+    const handleNewNotice = () => {
+        console.debug('Create New Notice');
+        window.open('https://fingerlakestrail.org/FLTC/editnotices.php?noticeid=new','NewNotice','top=100,left=100,width=600,height=740,resizable,scrollbars,status=0');
+    }
     useEffect(() => {
         if (!mapNotices||!headerRef.current) return;
         if (window.location.hash) {
@@ -194,7 +198,7 @@ export default function App() {
                     <Row className="mx-2 mb-1">
                         {noticeFilters.isAdmin && 
                             <Col className="p-0">
-                                <Button variant="success"><Icon icon="akar-icons:plus" className="pb-1" width="24" height="24"/>Add New Notice</Button>
+                                <Button variant="success" onClick={handleNewNotice}><Icon icon="akar-icons:plus" className="pb-1" width="24" height="24"/>Add New Notice</Button>
                             </Col>
                         }
                         <Col className="p-0 text-end align-self-end">Notices Displayed: {displayTotal}</Col>
@@ -208,6 +212,7 @@ export default function App() {
 
 function NavHeader({mapNotices,noticeFilters,headerRef}) {
     const [offset,setOffset] = useState(0);
+    const navRef = useRef();
 
     //TODO: Move to mapNotices object build above
     const getClassName = useCallback(i => {
@@ -230,6 +235,9 @@ function NavHeader({mapNotices,noticeFilters,headerRef}) {
         const offset = (headerRef.current.offsetHeight+50)*-1;
         setOffset(offset);
     },[headerRef]);
+    useLayoutEffect(()=> {
+        document.querySelectorAll('#sticky-header .nav .highlight').forEach(el=>el.classList.remove('highlight'));
+    },[noticeFilters]);
     return (
         <section className="border rounded p-2 my-3 d-none d-sm-none d-md-block">
             <Row>
@@ -241,7 +249,7 @@ function NavHeader({mapNotices,noticeFilters,headerRef}) {
                     <p className="mb-0 px-2 py-1"><span className="badge text-bg-secondary">No Active Notices</span></p>
                 </Col>
             </Row>
-            <Nav>
+            <Nav ref={navRef}>
                 {mapNotices.map((m,i) => (
                     <Nav.Item key={m.tm_id}>
                         <Nav.Link as={Link} href={`#${m.tm_name}`} to={`${m.tm_name}`} className={getClassName(i)} activeClass="highlight" smooth={true} spy={true} hashSpy={true} delay={0} duration={2000} offset={offset} disabled={isDisabled(i)}>{m.tm_name}</Nav.Link>
@@ -253,7 +261,6 @@ function NavHeader({mapNotices,noticeFilters,headerRef}) {
 }
 
 function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
-    const showMapRef = useRef();
     const [showArchived,setShowArchived] = useState(noticeFilters.archive);
     const [sortBy,setSortBy] = useState(noticeFilters.sortBy);
     const handleChange = e => {
@@ -279,26 +286,24 @@ function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
                     <Form.Group as={Row} className="d-flex align-items-center">
                         <Form.Label column xs="auto">Show: </Form.Label>
                         <Col xs="auto">
-                            <Form.Select ref={showMapRef} aria-label="Show only selected" name="showMap" value={JSON.stringify(noticeFilters.showMap)} onChange={handleChange} disabled={sortBy=='date'}>
+                            <Form.Select aria-label="Show only selected" name="showMap" value={JSON.stringify(noticeFilters.showMap)} onChange={handleChange} disabled={sortBy=='date'}>
                                 <option value={JSON.stringify({type:'map',map:'',name:'',title:''})}>All Notices</option>
                                 {nonMapList.map(nm=><option key={nm.name} value={JSON.stringify({type:'non-map',map:nm.name,name:nm.name,title:nm.title})}>{nm.title}</option>)}
                                 <option disabled value="">-----</option>
                                 {maps.map(m=><option key={m.tm_id} value={JSON.stringify({type:'map',map:m.tm_id,name:m.tm_name,title:m.tm_name})}>{m.tm_name}</option>)}
                             </Form.Select>
                         </Col>
-                        <Col xs="auto">
+                        <Col xs="auto" className="pt-2 pt-sm-0">
                             <Form.Check type="switch" name="archived" label="Archived" checked={showArchived} onChange={handleChange}/>
                         </Col>
                     </Form.Group>
-                    {!noticeFilters.showMap.map && 
-                        <Form.Group as={Row} className="d-flex align-items-center">
-                            <Form.Label column xs="auto">Sort By: </Form.Label>
-                            <Col xs="auto">
-                                <Form.Check type="radio" name="sortBy" label="Map" value="map" inline checked={sortBy=='map'} onChange={handleChange}/>
-                                <Form.Check type="radio" name="sortBy" label="Date" value="date" inline checked={sortBy=='date'} onChange={handleChange}/>
-                            </Col>
-                        </Form.Group>
-                    }
+                    <Form.Group as={Row} className="d-flex align-items-center">
+                        <Form.Label column xs="auto">Sort By: </Form.Label>
+                        <Col xs="auto">
+                            <Form.Check type="radio" name="sortBy" label="Map" value="map" inline checked={sortBy=='map'} onChange={handleChange}/>
+                            <Form.Check type="radio" name="sortBy" label="Date" value="date" inline checked={sortBy=='date'} onChange={handleChange}/>
+                        </Col>
+                    </Form.Group>
                 </div>
             </Form>
         </section>
@@ -307,7 +312,10 @@ function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
 
 function Notices({mapNotices,noticeFilters,setNoticeFilters}) {
     const handleAdminButtons = useCallback((action,tn_id) => {
-        if (action == 'edit') window.open(`https://fingerlakestrail.org/FLTC/editnotices.php?noticeid=${tn_id}`,'EditNotice','top=100,left=100,width=600,height=740,resizable,scrollbars,status=0');
+        if (action == 'edit') {
+            console.debug(`Edit Notice (id: ${tn_id})`);
+            window.open(`https://fingerlakestrail.org/FLTC/editnotices.php?noticeid=${tn_id}`,'EditNotice','top=100,left=100,width=600,height=740,resizable,scrollbars,status=0');
+        }
     },[mapNotices,noticeFilters]);
     return (
         <section id="notice-grid" className={`border rounded mb-5 ${(noticeFilters.sortBy=='date')?'pt-2':''}`}>
@@ -337,9 +345,9 @@ function NoticeHeader({map,noticeFilters,setNoticeFilters}) {
                 <Col xs={6} className="text-end">Count: {map.display_count}</Col>
             </Row>
             {(noticeFilters.showMap.type=='map'&&noticeFilters.showMap.map!='') && 
-                <Row>
+                <Row className="adjacent">
                     <Col xs={12} className="text-center">Adjacent Maps: {map.adjacentMaps.map(a => {
-                        if (a.id) return <a key={a.name} className="me-2" style={{color:'#fff'}} onClick={()=>setNoticeFilters({showMap:{type:'map',map:a.id}})}>{a.name}</a>;
+                        if (a.id) return <a key={a.name} className="me-2" style={{color:'#fff'}} onClick={()=>setNoticeFilters({showMap:{type:'map',map:a.id,name:a.name,title:a.name}})}>{a.name}</a>;
                         return <span key={a.name} className="me-2">{a.name}</span>;
                     })}</Col>
                 </Row>
