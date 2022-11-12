@@ -78,7 +78,7 @@ export default function App() {
 
         return obj;
     },{
-        showMap:{type:'',map:'',name:searchParams.get('show')||'',title:''},
+        showMap:{type:'',map:'',name:searchParams.get('show').toUpperCase()||'',title:''},
         archive:searchParams.get('archive')=='old',
         sortBy:searchParams.get('sortBy')||'map',
         hideNav:searchParams.has('hidenav'),
@@ -286,11 +286,15 @@ function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
                     <Form.Group as={Row} className="d-flex align-items-center">
                         <Form.Label column xs="auto">Show: </Form.Label>
                         <Col xs="auto">
-                            <Form.Select aria-label="Show only selected" name="showMap" value={JSON.stringify(noticeFilters.showMap)} onChange={handleChange} disabled={sortBy=='date'}>
+                            <Form.Select aria-label="Show only selected" name="showMap" value={JSON.stringify(noticeFilters.showMap)} onChange={handleChange}>
                                 <option value={JSON.stringify({type:'map',map:'',name:'',title:''})}>All Notices</option>
                                 {nonMapList.map(nm=><option key={nm.name} value={JSON.stringify({type:'non-map',map:nm.name,name:nm.name,title:nm.title})}>{nm.title}</option>)}
-                                <option disabled value="">-----</option>
-                                {maps.map(m=><option key={m.tm_id} value={JSON.stringify({type:'map',map:m.tm_id,name:m.tm_name,title:m.tm_name})}>{m.tm_name}</option>)}
+                                {sortBy=='map' && 
+                                    <>
+                                        <option disabled value="">-----</option>
+                                        {maps.map(m=><option key={m.tm_id} value={JSON.stringify({type:'map',map:m.tm_id,name:m.tm_name,title:m.tm_name})}>{m.tm_name}</option>)}
+                                    </>
+                                }
                             </Form.Select>
                         </Col>
                         <Col xs="auto" className="pt-2 pt-sm-0">
@@ -338,7 +342,10 @@ function NoticeHeader({map,noticeFilters,setNoticeFilters}) {
     return (
         <header className="mx-2 p-2 rounded-top">
             <Row>
-                <Col xs={12} className="text-center">{map.tm_name}{map.tm_location && <small> - {map.tm_location}</small>}</Col>
+                <Col xs={12} className="text-center">
+                    {map.tm_name}{map.tm_location && <small> - {map.tm_location}</small>}
+                    {map.tm_url && <Button href={`/${map.tm_url}`} size="sm" variant="light" className="ms-1 py-0"><Icon icon="akar-icons:cart" className="pb-1" width="18" height="18"/>Buy Map</Button>}
+                </Col>
             </Row>
             <Row>
                 <Col xs={6}>Revised: <FormatDate>{map.tm_revision}</FormatDate></Col>
