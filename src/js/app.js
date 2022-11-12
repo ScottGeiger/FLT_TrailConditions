@@ -342,18 +342,22 @@ function NoticeHeader({map,noticeFilters,setNoticeFilters}) {
     return (
         <header className="mx-2 p-2 rounded-top">
             <Row>
-                <Col xs={12} className="text-center">
+                <Col xs={12} className="text-md-center">
                     {map.tm_name}{map.tm_location && <small> - {map.tm_location}</small>}
-                    {map.tm_url && <Button href={`/${map.tm_url}`} size="sm" variant="light" className="ms-1 py-0"><Icon icon="akar-icons:cart" className="pb-1" width="18" height="18"/>Buy Map</Button>}
+                    {map.tm_url && 
+                        <Button href={`/${map.tm_url}`} size="sm" variant="light" className="ms-1 py-0">
+                            <Icon icon="akar-icons:cart" className="pb-1" width="18" height="18"/>
+                            Buy<span className="d-none d-md-inline"> Map</span>
+                        </Button>}
                 </Col>
             </Row>
             <Row>
-                <Col xs={6}>Revised: <FormatDate>{map.tm_revision}</FormatDate></Col>
-                <Col xs={6} className="text-end">Count: {map.display_count}</Col>
+                <Col xs={12} md={6}>Revised: <FormatDate>{map.tm_revision}</FormatDate></Col>
+                <Col xs={12} md={6} className="text-md-end">Count: {map.display_count}</Col>
             </Row>
             {(noticeFilters.showMap.type=='map'&&noticeFilters.showMap.map!='') && 
                 <Row className="adjacent">
-                    <Col xs={12} className="text-center">Adjacent Maps: {map.adjacentMaps.map(a => {
+                    <Col xs={12} className="text-md-center">Adjacent Maps: {map.adjacentMaps.map(a => {
                         if (a.id) return <a key={a.name} className="me-2" style={{color:'#fff'}} onClick={()=>setNoticeFilters({showMap:{type:'map',map:a.id,name:a.name,title:a.name}})}>{a.name}</a>;
                         return <span key={a.name} className="me-2">{a.name}</span>;
                     })}</Col>
@@ -385,6 +389,7 @@ function NoticeDetails({notices,isAdmin,handleAdminButtons}) {
                             <p className="mb-0 fw-bold">{n.mapName}</p>
                             <p className="mb-0"><FormatDate>{n.tn_Date}</FormatDate></p>
                             {n.notice_type && <p className="mb-0 text-danger"><strong>{n.tn_tempNotice=="1"&&<Icon icon="mdi:alert"/>}{n.notice_type}</strong></p>}
+                            {n.tn_tempNotice=="1"&&n.closure_text && <p className="mb-0 text-danger d-block d-md-none">{n.closure_text}</p>}
                             {n.expired && <p className="mb-0 text-danger"><strong>EXPIRED!</strong></p>}
                             {isAdmin && <div className="d-flex">
                                 <Button variant="warning" className="mt-2 me-2" onClick={()=>handleAdminButtons('edit',n.tn_id)}><Icon icon="akar-icons:edit" width="24" height="24" className="pb-1"/>Edit</Button>
@@ -392,7 +397,7 @@ function NoticeDetails({notices,isAdmin,handleAdminButtons}) {
                             </div>}
                         </Col>
                         <Col md={9} className="border border-secondary p-2">
-                            {n.closure_text && <p className="text-danger"><strong>{n.tn_tempNotice=="1"&&<Icon icon="mdi:alert"/>}{n.closure_text}</strong></p>}
+                            {n.closure_text && <p className="text-danger d-none d-md-block"><strong>{n.tn_tempNotice=="1"&&<><Icon icon="mdi:alert"/>Temporary Notice: </>}{n.closure_text}</strong></p>}
                             <NoticeBody notice={n}/>
                         </Col>
                     </Row>
