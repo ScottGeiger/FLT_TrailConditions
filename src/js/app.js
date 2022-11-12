@@ -78,7 +78,7 @@ export default function App() {
 
         return obj;
     },{
-        showMap:{type:'',map:'',name:searchParams.get('show').toUpperCase()||'',title:''},
+        showMap:{type:'',map:'',name:searchParams.get('show')?.toUpperCase()||'',title:''},
         archive:searchParams.get('archive')=='old',
         sortBy:searchParams.get('sortBy')||'map',
         hideNav:searchParams.has('hidenav'),
