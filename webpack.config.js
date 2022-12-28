@@ -11,7 +11,7 @@ module.exports = (env, argv) => {
         entry: './src/js/index.js',
         output: {
             path: path.resolve(__dirname, dist, 'js'),
-            publicPath: '/js/',
+            publicPath: (argv.mode == 'production') ? '/FLTC/notices_v3/js/' : '/js/',
             filename: 'trailconditions.min.js',
             chunkFilename: '[chunkhash].min.js'
         },
@@ -70,6 +70,6 @@ module.exports = (env, argv) => {
                 new CssMinimizerPlugin()
             ]
         },
-        devtool: (argv.mode == 'production') ? '' : 'eval-source-map'
+        devtool: (argv.mode == 'production') ? false : 'eval-source-map'
     };
 };

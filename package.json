@@ -7,7 +7,7 @@
     "build": "npm-run-all -s clean-js webpack -s list",
     "build-dev": "npm-run-all -s clean-js webpack-dev list",
     "start-dev": "webpack-dev-server --mode=development",
-    "webpack": "webpack --config ./webpack.config.js",
+    "webpack": "webpack --mode production --config ./webpack.config.js",
     "webpack-dev": "webpack --mode development --config ./webpack.config.js",
     "build-css": "cleancss src/css/styles.css -o public/css/styles.min.css",
     "build-html": "html-minifier -c etc/html-minifier.conf src/index.html -o public/index.html",

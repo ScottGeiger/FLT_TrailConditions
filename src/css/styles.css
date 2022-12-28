@@ -30,30 +30,31 @@
     }
 }
 
-.nav-link {
-    cursor: pointer;
+#sticky-header {
+    position: sticky;
+    position: -webkit-sticky;
+    top:0;
+    background-color: #fff;
+    box-shadow: 0px 5px 5px rgba(0,0,0,.45);
 }
-.nav-link:hover { 
+#sticky-header .nav-link {
+    cursor: pointer;
+    text-decoration: none;
+}
+#sticky-header .nav-link:hover { 
     text-decoration: underline;
     text-decoration-thickness: 2px;
 }
-.nav-link.highlight {
-    /*text-decoration: underline;
-    text-decoration-thickness: 2px;*/
+#sticky-header .nav-link.highlight {
     background-color: #a5cbd7;
     border-radius: 6px;
 }
-.nav-link.disabled {
+#sticky-header .nav-link.disabled {
     color: #c9c9c9;
 }
-
-#sticky-header {
-    position: sticky;
-    top:0;
-    background-color: #fff;
-    padding-top: 1px;
-    padding-bottom: 1px;
-}
+/* Open Page Outside WP Theme */
+#sticky-header #open-external { display: none }
+#wrap_all #sticky-header #open-external { display: block }
 
 /* toTop Button */
 .toTop {
@@ -74,10 +75,44 @@
 #notice-grid section header .row:nth-child(2){
     font-variant: small-caps;
 }
-.expired {
+#notice-grid .expired {
     background-image: url('../images/expired.png');
     background-repeat: repeat;
 }
 
 /* Adjacent Map Links */
-.adjacent a { cursor: pointer;}
+#notice-grid .adjacent a { cursor: pointer;}
+
+/* make images responsive */
+#notice-grid img { max-width: 100% }
+
+/* fixes for embedded WP page */
+html.responsive, .responsive body {
+    overflow-x: unset;
+}
+#wrap_all { overflow: unset }
+@media only screen and (max-width: 767px) {
+    .responsive #top #wrap_all .av-flex-cells .no_margin {
+        overflow: unset;
+    }
+}
+
+#top form#notice-filters { margin-bottom: 0;}
+#top form#notice-filters .row {
+    zoom:unset;
+    clear: unset;
+    margin-bottom: 0;
+    position:static;
+}
+#top form#notice-filters label {
+    font-weight:unset;
+    font-size:initial;
+}
+#top form#notice-filters select { 
+  margin-bottom: 0;
+}
+@media only screen and (min-width: 997px) {
+    #wrap_all .title_container {
+        margin-top:inherit;
+    }
+}

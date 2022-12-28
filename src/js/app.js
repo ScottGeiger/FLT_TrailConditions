@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback, useReducer, useLayoutEffect } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback, useReducer, Suspense } from "react";
 import { onlineManager } from '@tanstack/react-query';
 import { format } from "date-fns";
-import { Container, Nav, Row, Col, Form, Button } from "react-bootstrap";
+import { Container, Nav, Row, Col, Form, Button, Collapse } from "react-bootstrap";
 import { useMapQueries } from "./queries";
 import { useSearchParams } from "react-router-dom";
 import { groupBy, orderBy, snakeCase, startCase } from "lodash";
@@ -9,23 +9,11 @@ import { Link, scroller } from "react-scroll";
 import htmr from "htmr";
 import { Icon } from '@iconify/react';
 import { Loading, LoadingError } from "./utils";
+import { title, nonMapList } from "./config";
 
-const mailtoBody = 'For the latest information about trail conditions visit https://fingerlakestrail.org/trailconditions';
-
-const nonMapList = [
-    {name:'closure',title:'All Closures'},
-    {name:'hunting',title:'Hunting Closures'},
-    {name:'non-hunting',title:'Non-Hunting Closures'},
-    {name:'rev-notice',title:'Map Revisions'},
-    {name:'temp-notice',title:'Temporary Notices'}
-];
-
-const title = 'Trail Condition Notices';
-
-const FormatDate = React.memo(({fmt,children}) => {
-    const dt = (!children)?new Date():new Date(children*1000);
-    return (!fmt)?format(dt,'PP'):format(dt,fmt);
-});
+const NavHeader = React.lazy(()=>import("../js/blocks/navheader"));
+const NoticeFilter = React.lazy(()=>import("../js/blocks/noticefilter"));
+const Notices = React.lazy(()=>import("../js/blocks/notices"));
 
 export default function App() {
     const [searchParams,setSearchParams] = useSearchParams();
@@ -35,7 +23,7 @@ export default function App() {
 
     const isOnline = onlineManager.isOnline();
     const {getSession,getMaps,getNotices} = useMapQueries();
-    const session = getSession({onSuccess:d => setNoticeFilters({isAdmin:!!d?.login_array?.aid})});
+    const session = getSession({onSuccess:d => setNoticeFilters({isAdmin:searchParams.has('showAdmin')||!!d?.login_array?.aid})});
     const maps = getMaps();
     const notices = getNotices({enabled:!!maps.data});
 
@@ -141,7 +129,7 @@ export default function App() {
                     process_notice(n);
                     if (!n.expired && n.is_closure) active_closures++;
                     if (!n.expired) active_notices++;
-                    if (n.show) display_count++;
+                    if (show&&n.show) display_count++;
                     total_notices++;
                 });
                 const adj = [];
@@ -172,9 +160,13 @@ export default function App() {
         }
     },[maps.data,notices.data,noticeFilters]);
 
+    const [showNav,setShowNav] = useState(true);
+
     const handleNewNotice = () => {
+        const width = (window.innerWidth-100)*.7||580;
+        const height = (window.innerHeight-100)*.9||740;
         console.debug('Create New Notice');
-        window.open('https://fingerlakestrail.org/FLTC/editnotices.php?noticeid=new','NewNotice','top=100,left=100,width=600,height=740,resizable,scrollbars,status=0');
+        window.open('https://fingerlakestrail.org/FLTC/editnotices.php?noticeid=new','NewNotice',`top=100,left=100,width=${width},height=${height},resizable,scrollbars,status=0`);
     }
     useEffect(() => {
         if (!mapNotices||!headerRef.current) return;
@@ -182,243 +174,42 @@ export default function App() {
             const offset = (headerRef.current.offsetHeight)*-1;
             scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{smooth:'true',delay:0,offset:offset});
         }
+        // if page is inside WP recalculate bottom of header
+        const header = document.querySelector('#header');
+        const styles = document.querySelector('#embedded-styles');
+        if (header&&styles) {
+            const rect = header.getBoundingClientRect();
+            styles.textContent = `#notice_page #sticky-header{top:${rect?.bottom||0}px;z-index:1}`;
+        }
     },[window.location,mapNotices,headerRef]);
     return (
         <Container as="main" className="mt-3" fluid>
             {(maps.isLoading||notices.isLoading) && <Loading/>}
             {((maps.isError||notices.isError)&&isOnline) && <LoadingError/>}
             {(maps.data&&notices.data) && 
-                <>
+                <Suspense fallback={<Loading/>}>
                     {!noticeFilters.hideNav &&
-                        <div ref={headerRef} id="sticky-header">
-                            {noticeFilters.sortBy=='map' && <NavHeader mapNotices={mapNotices} noticeFilters={noticeFilters} headerRef={headerRef}/>}
-                            <NoticeFilter maps={maps.data} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
+                        <div ref={headerRef} id="sticky-header" className="mb-3 p-2 pb-1 rounded">
+                            <Collapse in={showNav}>
+                                <div id="nav-menu">
+                                    {noticeFilters.sortBy=='map' && <NavHeader mapNotices={mapNotices} noticeFilters={noticeFilters} headerRef={headerRef}/>}
+                                    <NoticeFilter maps={maps.data} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters} nonMapList={nonMapList}/>
+                                </div>
+                            </Collapse>
+                            <section className="px-1 py-0">
+                                <Row className="mx-2 mb-1">
+                                    <Col className="p-0">
+                                        {noticeFilters.isAdmin&&<Button variant="success" onClick={handleNewNotice}><Icon icon="akar-icons:plus" className="pb-1" width="24" height="24"/>Add New Notice</Button>}
+                                    </Col>
+                                    <Col xs={3} sm={1} className="text-center"><Button variant="light" className="mt-1" onClick={()=>setShowNav(!showNav)}><Icon icon={(showNav)?"akar-icons:chevron-up":"akar-icons:chevron-down"}/></Button></Col>
+                                    <Col className="p-0 text-end align-self-end">Notices Displayed: {displayTotal}</Col>
+                                </Row>
+                            </section>
                         </div>
                     }
-                    <Row className="mx-2 mb-1">
-                        {noticeFilters.isAdmin && 
-                            <Col className="p-0">
-                                <Button variant="success" onClick={handleNewNotice}><Icon icon="akar-icons:plus" className="pb-1" width="24" height="24"/>Add New Notice</Button>
-                            </Col>
-                        }
-                        <Col className="p-0 text-end align-self-end">Notices Displayed: {displayTotal}</Col>
-                    </Row>
                     <Notices mapNotices={mapNotices} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
-                </>
+                </Suspense>
             }
         </Container>
     );
-}
-
-function NavHeader({mapNotices,noticeFilters,headerRef}) {
-    const [offset,setOffset] = useState(0);
-    const navRef = useRef();
-
-    //TODO: Move to mapNotices object build above
-    const getClassName = useCallback(i => {
-        if (!mapNotices) return '';
-        const disabled = isDisabled(i);
-        let cName = 'text-secondary';
-        if (mapNotices[i].active_notices > 0) cName = 'text-primary';
-        if (mapNotices[i].active_closures > 0) cName = 'text-danger';
-        if (disabled) cName = "";
-        cName += ' p-1';
-        return cName;
-    },[mapNotices]);
-
-    const isDisabled = useCallback(i => {
-        return (noticeFilters.showMap.type=='non-map' && !mapNotices[i].display_count)?true:!mapNotices[i].show;
-    },[mapNotices,noticeFilters]);
-
-    useEffect(() => {
-        if (!headerRef.current) return;
-        const offset = (headerRef.current.offsetHeight+50)*-1;
-        setOffset(offset);
-    },[headerRef]);
-    useLayoutEffect(()=> {
-        document.querySelectorAll('#sticky-header .nav .highlight').forEach(el=>el.classList.remove('highlight'));
-    },[noticeFilters]);
-    return (
-        <section className="border rounded p-2 my-3 d-none d-sm-none d-md-block">
-            <Row>
-                <Col className="d-flex flex-row align-items-center">
-                    <h3 className="mb-0">Navigation</h3>
-                    <p className="mb-0 p-2 pb-1">Key:</p>
-                    <p className="mb-0 px-2 py-1"><span className="badge text-bg-danger">Active Closure</span></p>
-                    <p className="mb-0 px-2 py-1"><span className="badge text-bg-primary">Active Notice</span></p>
-                    <p className="mb-0 px-2 py-1"><span className="badge text-bg-secondary">No Active Notices</span></p>
-                </Col>
-            </Row>
-            <Nav ref={navRef}>
-                {mapNotices.map((m,i) => (
-                    <Nav.Item key={m.tm_id}>
-                        <Nav.Link as={Link} href={`#${m.tm_name}`} to={`${m.tm_name}`} className={getClassName(i)} activeClass="highlight" smooth={true} spy={true} hashSpy={true} delay={0} duration={2000} offset={offset} disabled={isDisabled(i)}>{m.tm_name}</Nav.Link>
-                    </Nav.Item>
-                ))}
-            </Nav>
-        </section>
-    );
-}
-
-function NoticeFilter({maps,noticeFilters,setNoticeFilters}) {
-    const [showArchived,setShowArchived] = useState(noticeFilters.archive);
-    const [sortBy,setSortBy] = useState(noticeFilters.sortBy);
-    const handleChange = e => {
-        switch(e.target.name) {
-            case "showMap":
-                const obj = JSON.parse(e.target.value);
-                setNoticeFilters({showMap:obj});
-                break;
-            case "archived":
-                setShowArchived(e.target.checked);
-                setNoticeFilters({archive:e.target.checked});
-                break;
-            case "sortBy":
-                setSortBy(e.target.value);
-                setNoticeFilters({sortBy:e.target.value});
-                break;
-        }
-    }
-    return (
-        <section className="border rounded p-2 my-3">
-            <Form>
-                <div className="d-flex justify-content-between">
-                    <Form.Group as={Row} className="d-flex align-items-center">
-                        <Form.Label column xs="auto">Show: </Form.Label>
-                        <Col xs="auto">
-                            <Form.Select aria-label="Show only selected" name="showMap" value={JSON.stringify(noticeFilters.showMap)} onChange={handleChange}>
-                                <option value={JSON.stringify({type:'map',map:'',name:'',title:''})}>All Notices</option>
-                                {nonMapList.map(nm=><option key={nm.name} value={JSON.stringify({type:'non-map',map:nm.name,name:nm.name,title:nm.title})}>{nm.title}</option>)}
-                                {sortBy=='map' && 
-                                    <>
-                                        <option disabled value="">-----</option>
-                                        {maps.map(m=><option key={m.tm_id} value={JSON.stringify({type:'map',map:m.tm_id,name:m.tm_name,title:m.tm_name})}>{m.tm_name}</option>)}
-                                    </>
-                                }
-                            </Form.Select>
-                        </Col>
-                        <Col xs="auto" className="pt-2 pt-sm-0">
-                            <Form.Check type="switch" name="archived" label="Archived" checked={showArchived} onChange={handleChange}/>
-                        </Col>
-                    </Form.Group>
-                    <Form.Group as={Row} className="d-flex align-items-center">
-                        <Form.Label column xs="auto">Sort By: </Form.Label>
-                        <Col xs="auto">
-                            <Form.Check type="radio" name="sortBy" label="Map" value="map" inline checked={sortBy=='map'} onChange={handleChange}/>
-                            <Form.Check type="radio" name="sortBy" label="Date" value="date" inline checked={sortBy=='date'} onChange={handleChange}/>
-                        </Col>
-                    </Form.Group>
-                </div>
-            </Form>
-        </section>
-    );
-}
-
-function Notices({mapNotices,noticeFilters,setNoticeFilters}) {
-    const handleAdminButtons = useCallback((action,tn_id) => {
-        if (action == 'edit') {
-            console.debug(`Edit Notice (id: ${tn_id})`);
-            window.open(`https://fingerlakestrail.org/FLTC/editnotices.php?noticeid=${tn_id}`,'EditNotice','top=100,left=100,width=600,height=740,resizable,scrollbars,status=0');
-        }
-    },[mapNotices,noticeFilters]);
-    return (
-        <section id="notice-grid" className={`border rounded mb-5 ${(noticeFilters.sortBy=='date')?'pt-2':''}`}>
-            {noticeFilters.sortBy=='map' && mapNotices.map(m => {
-                if (!m.show) return null;
-                if (noticeFilters.showMap.type=='non-map' && !m.notices?.some(n=>n.show)) return null;
-                return (
-                    <section key={m.tm_id} id={m.mapNameSC} name={m.tm_name} className="mt-2">
-                        <NoticeHeader map={m} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
-                        <NoticeDetails notices={m.notices} isAdmin={noticeFilters.isAdmin} handleAdminButtons={handleAdminButtons}/>
-                    </section>
-                );
-            })}
-            {noticeFilters.sortBy=='date' && <NoticeDetails notices={mapNotices} isAdmin={noticeFilters.isAdmin} handleAdminButtons={handleAdminButtons}/>}
-        </section>
-    )
-}
-
-function NoticeHeader({map,noticeFilters,setNoticeFilters}) {
-    return (
-        <header className="mx-2 p-2 rounded-top">
-            <Row>
-                <Col xs={12} className="text-md-center">
-                    {map.tm_name}{map.tm_location && <small> - {map.tm_location}</small>}
-                    {map.tm_url && 
-                        <Button href={`/${map.tm_url}`} size="sm" variant="light" className="ms-1 py-0">
-                            <Icon icon="akar-icons:cart" className="pb-1" width="18" height="18"/>
-                            Buy<span className="d-none d-md-inline"> Map</span>
-                        </Button>}
-                </Col>
-            </Row>
-            <Row>
-                <Col xs={12} md={6}>Revised: <FormatDate>{map.tm_revision}</FormatDate></Col>
-                <Col xs={12} md={6} className="text-md-end">Count: {map.display_count}</Col>
-            </Row>
-            {(noticeFilters.showMap.type=='map'&&noticeFilters.showMap.map!='') && 
-                <Row className="adjacent">
-                    <Col xs={12} className="text-md-center">Adjacent Maps: {map.adjacentMaps.map(a => {
-                        if (a.id) return <a key={a.name} className="me-2" style={{color:'#fff'}} onClick={()=>setNoticeFilters({showMap:{type:'map',map:a.id,name:a.name,title:a.name}})}>{a.name}</a>;
-                        return <span key={a.name} className="me-2">{a.name}</span>;
-                    })}</Col>
-                </Row>
-            }
-        </header>
-    );
-}
-
-function NoticeDetails({notices,isAdmin,handleAdminButtons}) {
-    return (
-        <>
-            {notices && !notices.some(n=>n.show) && 
-                <Row as="article" className="mx-2 bg-secondary bg-opacity-50">
-                    <Col xs={12} className="border border-top-0 border-secondary p-2 text-center fst-italic">
-                        <p className="mb-0">No Notices</p>
-                    </Col>
-                </Row>
-            }
-            {notices && notices.map(n => {
-                if (!n.show) return null;
-                let cName = "mx-2";
-                if (n.tn_RevNotice!="0") cName += " bg-danger bg-opacity-50";
-                if (n.expired) cName += " bg-secondary bg-opacity-50 expired";
-                const mailtoSubject = `Trail Condition Notice - ${n.mapName}`;
-                return (
-                    <Row key={n.tn_id} as="article" id={`notice_id-${n.tn_id}`} className={cName}>
-                        <Col md={3} className="border border-secondary p-2">
-                            <p className="mb-0 fw-bold">{n.mapName}</p>
-                            <p className="mb-0"><FormatDate>{n.tn_Date}</FormatDate></p>
-                            {n.notice_type && <p className="mb-0 text-danger"><strong>{n.tn_tempNotice=="1"&&<Icon icon="mdi:alert"/>}{n.notice_type}</strong></p>}
-                            {n.tn_tempNotice=="1"&&n.closure_text && <p className="mb-0 text-danger d-block d-md-none">{n.closure_text}</p>}
-                            {n.expired && <p className="mb-0 text-danger"><strong>EXPIRED!</strong></p>}
-                            {isAdmin && <div className="d-flex">
-                                <Button variant="warning" className="mt-2 me-2" onClick={()=>handleAdminButtons('edit',n.tn_id)}><Icon icon="akar-icons:edit" width="24" height="24" className="pb-1"/>Edit</Button>
-                                <Button variant="primary" className="mt-2" href={`mailto:hiking@fingerlakestrail.org?body=${mailtoBody}&subject=${mailtoSubject}`}><Icon icon="akar-icons:send" width="24" height="24" className="pb-1"/>Email</Button>
-                            </div>}
-                        </Col>
-                        <Col md={9} className="border border-secondary p-2">
-                            {n.closure_text && <p className="text-danger d-none d-md-block"><strong>{n.tn_tempNotice=="1"&&<><Icon icon="mdi:alert"/>Temporary Notice: </>}{n.closure_text}</strong></p>}
-                            <NoticeBody notice={n}/>
-                        </Col>
-                    </Row>
-                );
-            })}
-        </>
-    );
-}
-
-//make callback or memoize?
-function NoticeBody({notice}) {
-    const parseHTML = () => {
-        let html = null
-        try {
-            html = htmr(notice.tn_Notice);
-        } catch {
-            const msg = `Unabled to display Notice - Invalid HTML (id:${notice.tn_id},map:${notice.mapName})`;
-            console.error(msg);
-            html = <p className="text-danger mb-0">{msg}</p>;
-        }
-        return html;
-    }
-    return parseHTML();
 }

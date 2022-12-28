@@ -1,6 +1,7 @@
 import React from "react";
 import { Row, Col, Alert } from "react-bootstrap";
 import { Icon } from "@iconify/react";
+import { format } from "date-fns";
 
 export function Loading() {
     return (
@@ -39,3 +40,10 @@ export function LoadingError() {
         </Row>
     );
 }
+
+const FormatDate = React.memo(({fmt,children}) => {
+    const dt = (!children)?new Date():new Date(children*1000);
+    return (!fmt)?format(dt,'PP'):format(dt,fmt);
+});
+
+export {FormatDate};
