@@ -1,91 +1,3 @@
-/* App Styles */
-
-/* center on page */
-.center-page {
-    width:100vw;
-    height:100vh;
-    display:grid;
-    justify-content: center;
-    align-content: center;
-}
-.center-page p { text-align:center }
-
-/* smaller font */
-.font-size-95 { font-size: 95% }
-.font-size-90 { font-size: 90% }
-
-/* spin animation class for iconify icons */
-.spin {
-    animation-name: spin;
-    animation-duration: 2000ms;
-    animation-iteration-count: infinite;
-    animation-timing-function: linear;
-}
-@keyframes spin {
-    from {
-        transform:rotate(0deg);
-    }
-    to {
-        transform:rotate(360deg);
-    }
-}
-
-#sticky-header {
-    position: sticky;
-    position: -webkit-sticky;
-    top:0;
-    background-color: #fff;
-    box-shadow: 0px 5px 5px rgba(0,0,0,.45);
-}
-#sticky-header .nav-link {
-    cursor: pointer;
-    text-decoration: none;
-}
-#sticky-header .nav-link:hover { 
-    text-decoration: underline;
-    text-decoration-thickness: 2px;
-}
-#sticky-header .nav-link.highlight {
-    background-color: #a5cbd7;
-    border-radius: 6px;
-}
-#sticky-header .nav-link.disabled {
-    color: #c9c9c9;
-}
-/* Open Page Outside WP Theme */
-#sticky-header #open-external { display: none }
-#wrap_all #sticky-header #open-external { display: block }
-
-/* toTop Button */
-.toTop {
-    position:fixed;
-    bottom: 2rem;
-    right: 2rem;
-    opacity:0.9;
-}
-
-/* Notice Header Styles */
-#notice-grid section header {
-    background-color: #c3512f;
-    color: #fff;
-}
-#notice-grid section header .row:nth-child(1){
-    text-transform: uppercase;
-}
-#notice-grid section header .row:nth-child(2){
-    font-variant: small-caps;
-}
-#notice-grid .expired {
-    background-image: url('../images/expired.png');
-    background-repeat: repeat;
-}
-
-/* Adjacent Map Links */
-#notice-grid .adjacent a { cursor: pointer;}
-
-/* make images responsive */
-#notice-grid img { max-width: 100% }
-
 /* fixes for embedded WP page */
 html.responsive, .responsive body {
     overflow-x: unset;
@@ -109,7 +21,7 @@ html.responsive, .responsive body {
     font-size:initial;
 }
 #top form#notice-filters select { 
-  margin-bottom: 0;
+    margin-bottom: 0;
 }
 @media only screen and (min-width: 997px) {
     #wrap_all .title_container {

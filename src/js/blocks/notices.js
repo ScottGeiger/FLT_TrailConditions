@@ -23,11 +23,11 @@ export default function Notices({mapNotices,noticeFilters,setNoticeFilters}) {
                 return (
                     <section key={m.tm_id} id={m.mapNameSC} name={m.tm_name} className="mt-2 mb-4">
                         <NoticeHeader map={m} noticeFilters={noticeFilters} setNoticeFilters={setNoticeFilters}/>
-                        <NoticeDetails notices={m.notices} isAdmin={noticeFilters.isAdmin} handleAdminButtons={handleAdminButtons}/>
+                        <NoticeDetails notices={m.notices} isAdmin={noticeFilters.isAdmin} handleAdminButtons={handleAdminButtons} noticeType="map"/>
                     </section>
                 );
             })}
-            {noticeFilters.sortBy=='date' && <NoticeDetails notices={mapNotices} isAdmin={noticeFilters.isAdmin} handleAdminButtons={handleAdminButtons}/>}
+            {noticeFilters.sortBy=='date' && <NoticeDetails notices={mapNotices} isAdmin={noticeFilters.isAdmin} handleAdminButtons={handleAdminButtons} noticeType="date"/>}
         </section>
     )
 }
@@ -61,7 +61,7 @@ function NoticeHeader({map,noticeFilters,setNoticeFilters}) {
     );
 }
 
-function NoticeDetails({notices,isAdmin,handleAdminButtons}) {
+function NoticeDetails({notices,isAdmin,handleAdminButtons,noticeType}) {
     return (
         <>
             {notices && !notices.some(n=>n.show) && 
@@ -73,7 +73,7 @@ function NoticeDetails({notices,isAdmin,handleAdminButtons}) {
             }
             {notices && notices.map(n => {
                 if (!n.show) return null;
-                let cName = "mx-2";
+                let cName = `mx-2 mb-${(noticeType=="map")?"0":"2"}`;
                 if (n.tn_RevNotice!="0") cName += " bg-danger bg-opacity-50";
                 if (n.expired) cName += " bg-secondary bg-opacity-50 expired";
                 const mailtoSubject = `Trail Condition Notice - ${n.mapName}`;

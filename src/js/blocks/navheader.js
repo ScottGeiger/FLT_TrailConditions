@@ -41,11 +41,6 @@ export default function NavHeader({mapNotices,noticeFilters,headerRef}) {
                     <p className="mb-0 px-2 py-1"><span className="badge text-bg-primary">Active Notice</span></p>
                     <p className="mb-0 px-2 py-1"><span className="badge text-bg-secondary">No Active Notices</span></p>
                 </Col>
-                <Col xs="auto" id="open-external">
-                    <p className="mb-0 px-2 py-1 text-secondary">
-                        <a href="./index.html" target="external_conditions" className="nav-link">Open New Window <Icon icon="akar-icons:link-out"/></a>
-                    </p>
-                </Col>
             </Row>
             <Nav ref={navRef}>
                 {mapNotices.map((m,i) => (

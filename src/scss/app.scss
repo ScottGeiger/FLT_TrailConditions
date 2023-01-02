@@ -1,7 +1,121 @@
-@import "../../node_modules/bootstrap/scss/functions";
-@import "../../node_modules/bootstrap/scss/variables";
-@import "../../node_modules/bootstrap/scss/mixins";
+// Custom.scss
+// Option B: Include parts of Bootstrap
 
+// 1. Include functions first (so you can manipulate colors, SVGs, calc, etc)
+@import "../../node_modules/bootstrap/scss/functions";
+
+// 2. Include any default variable overrides here
 $enable-responsive-font-sizes: true;
 
-@import "../../node_modules/bootstrap/scss/bootstrap";
+// 3. Include remainder of required Bootstrap stylesheets
+@import "../../node_modules/bootstrap/scss/variables";
+
+// 4. Include any default map overrides here
+
+// 5. Include remainder of required parts
+@import "../../node_modules/bootstrap/scss/maps";
+@import "../../node_modules/bootstrap/scss/mixins";
+@import "../../node_modules/bootstrap/scss/root";
+
+.bootstrap-styles {
+    @import "../../node_modules/bootstrap/scss/bootstrap";
+}
+// 8. Add additional custom code here
+.bootstrap-styles {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-family: var(--bs-body-font-family);
+    font-size: var(--bs-body-font-size);
+    font-weight: var(--bs-body-font-weight);
+    line-height: var(--bs-body-line-height);
+    margin: 0;
+    text-align: var(--bs-body-text-align)
+}
+
+#trailconditions {
+    .center-page {
+        width:100vw;
+        height:100vh;
+        display:grid;
+        justify-content: center;
+        align-content: center;
+    }
+    .center-page p { text-align:center }
+    
+    /* smaller font */
+    .font-size-95 { font-size: 95% }
+    .font-size-90 { font-size: 90% }
+    
+    /* spin animation class for iconify icons */
+    .spin {
+        animation-name: spin;
+        animation-duration: 2000ms;
+        animation-iteration-count: infinite;
+        animation-timing-function: linear;
+    }
+    @keyframes spin {
+        from {
+            transform:rotate(0deg);
+        }
+        to {
+            transform:rotate(360deg);
+        }
+    }
+    
+    #sticky-header {
+        position: sticky;
+        position: -webkit-sticky;
+        top:0;
+        z-index: 500;
+        background-color: #fff;
+        box-shadow: 0px 5px 5px rgba(0,0,0,.45);
+    }
+    #sticky-header .nav-link {
+        cursor: pointer;
+        text-decoration: none;
+    }
+    #sticky-header .nav-link:hover { 
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+    }
+    #sticky-header .nav-link.highlight {
+        background-color: #a5cbd7;
+        border-radius: 6px;
+    }
+    #sticky-header .nav-link.disabled {
+        color: #c9c9c9;
+    }
+    
+    /* toTop Button */
+    .toTop {
+        position:fixed;
+        bottom: 2rem;
+        right: 2rem;
+        opacity:0.9;
+    }
+    
+    /* Notice Header Styles */
+    #notice-grid section header {
+        background-color: #c3512f;
+        color: #fff;
+    }
+    #notice-grid section header .row:nth-child(1){
+        text-transform: uppercase;
+    }
+    #notice-grid section header .row:nth-child(2){
+        font-variant: small-caps;
+    }
+    #notice-grid .expired {
+        background-image: url('../images/expired.png');
+        background-repeat: repeat;
+    }
+    
+    /* Adjacent Map Links */
+    #notice-grid .adjacent a { cursor: pointer;}
+    
+    /* make images responsive */
+    #notice-grid img { max-width: 100% }
+
+}

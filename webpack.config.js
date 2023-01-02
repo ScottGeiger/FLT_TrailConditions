@@ -11,7 +11,7 @@ module.exports = (env, argv) => {
         entry: './src/js/index.js',
         output: {
             path: path.resolve(__dirname, dist, 'js'),
-            publicPath: (argv.mode == 'production') ? '/FLTC/notices_v3/js/' : '/js/',
+            publicPath: (argv.mode == 'production'&&!env.local) ? '/FLTC/notices_v3/js/' : '/js/',
             filename: 'trailconditions.min.js',
             chunkFilename: '[chunkhash].min.js'
         },

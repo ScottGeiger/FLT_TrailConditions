@@ -1,12 +1,10 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback, useReducer, Suspense } from "react";
+import React, { useEffect, useState, useMemo, useRef, useReducer, Suspense } from "react";
 import { onlineManager } from '@tanstack/react-query';
-import { format } from "date-fns";
-import { Container, Nav, Row, Col, Form, Button, Collapse } from "react-bootstrap";
+import { Container, Row, Col, Button, Collapse } from "react-bootstrap";
 import { useMapQueries } from "./queries";
 import { useSearchParams } from "react-router-dom";
 import { groupBy, orderBy, snakeCase, startCase } from "lodash";
-import { Link, scroller } from "react-scroll";
-import htmr from "htmr";
+import { scroller } from "react-scroll";
 import { Icon } from '@iconify/react';
 import { Loading, LoadingError } from "./utils";
 import { title, nonMapList } from "./config";
@@ -161,6 +159,7 @@ export default function App() {
     },[maps.data,notices.data,noticeFilters]);
 
     const [showNav,setShowNav] = useState(true);
+    const [WPStyles,setWPStyles] = useState({});
 
     const handleNewNotice = () => {
         const width = (window.innerWidth-100)*.7||580;
@@ -174,12 +173,13 @@ export default function App() {
             const offset = (headerRef.current.offsetHeight)*-1;
             scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{smooth:'true',delay:0,offset:offset});
         }
-        // if page is inside WP recalculate bottom of header
+        //if page is inside WP recalculate bottom of header
         const header = document.querySelector('#header');
-        const styles = document.querySelector('#embedded-styles');
-        if (header&&styles) {
+        if (header) {
+            //TODO: check for WPAdmin
             const rect = header.getBoundingClientRect();
-            styles.textContent = `#notice_page #sticky-header{top:${rect?.bottom||0}px;z-index:1}`;
+            const bottom = (rect?.width<=989)?0:rect?.bottom;
+            setWPStyles({top:`${bottom}px`});
         }
     },[window.location,mapNotices,headerRef]);
     return (
@@ -189,7 +189,7 @@ export default function App() {
             {(maps.data&&notices.data) && 
                 <Suspense fallback={<Loading/>}>
                     {!noticeFilters.hideNav &&
-                        <div ref={headerRef} id="sticky-header" className="mb-3 p-2 pb-1 rounded">
+                        <div ref={headerRef} id="sticky-header" style={WPStyles} className="mb-3 p-2 pb-1 rounded">
                             <Collapse in={showNav}>
                                 <div id="nav-menu">
                                     {noticeFilters.sortBy=='map' && <NavHeader mapNotices={mapNotices} noticeFilters={noticeFilters} headerRef={headerRef}/>}
@@ -202,7 +202,7 @@ export default function App() {
                                         {noticeFilters.isAdmin&&<Button variant="success" onClick={handleNewNotice}><Icon icon="akar-icons:plus" className="pb-1" width="24" height="24"/>Add New Notice</Button>}
                                     </Col>
                                     <Col xs={3} sm={1} className="text-center"><Button variant="light" className="mt-1" onClick={()=>setShowNav(!showNav)}><Icon icon={(showNav)?"akar-icons:chevron-up":"akar-icons:chevron-down"}/></Button></Col>
-                                    <Col className="p-0 text-end align-self-end">Notices Displayed: {displayTotal}</Col>
+                                    <Col className="p-0 text-end align-self-end">Notices<span className="d-none d-md-inline"> Displayed</span>: {displayTotal}</Col>
                                 </Row>
                             </section>
                         </div>
