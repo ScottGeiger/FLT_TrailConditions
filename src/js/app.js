@@ -4,7 +4,7 @@ import { Container, Row, Col, Button, Collapse } from "react-bootstrap";
 import { useMapQueries } from "./queries";
 import { useSearchParams } from "react-router-dom";
 import { groupBy, orderBy, snakeCase, startCase } from "lodash";
-import { scroller } from "react-scroll";
+//import { scroller } from "react-scroll";
 import { Icon } from '@iconify/react';
 import { Loading, LoadingError } from "./utils";
 import { title, nonMapList } from "./config";
@@ -103,6 +103,7 @@ export default function App() {
             if (noticeFilters.showMap.type == 'non-map' && s) {
                 if (noticeFilters.showMap.map == 'closure' && notice.is_closure) show = true;
                 if (noticeFilters.showMap.map == 'hunting' && notice_type == 'Hunting Closure') show = true;
+                if (noticeFilters.showMap.map == 'hide-hunting' && notice_type != 'Hunting Closure') show = true;
                 if (noticeFilters.showMap.map == 'non-hunting' && notice_type == 'Non-Hunting Closure') show = true;
                 if (noticeFilters.showMap.map == 'rev-notice' && notice_type == 'Map Revision') show = true;
                 if (noticeFilters.showMap.map == 'temp-notice' && notice_type == 'Temporary Notice') show = true;    
@@ -169,10 +170,10 @@ export default function App() {
     }
     useEffect(() => {
         if (!mapNotices||!headerRef.current) return;
-        if (window.location.hash) {
+        /*if (window.location.hash) {
             const offset = (headerRef.current.offsetHeight)*-1;
-            scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{smooth:'true',delay:0,offset:offset});
-        }
+            //scroller.scrollTo(snakeCase(window.location.hash.slice(1,)),{smooth:'false',delay:0,offset:offset});
+        }*/
         //if page is inside WP recalculate bottom of header
         const header = document.querySelector('#header');
         if (header) {

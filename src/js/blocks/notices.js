@@ -74,7 +74,7 @@ function NoticeDetails({notices,isAdmin,handleAdminButtons,noticeType}) {
             {notices && notices.map(n => {
                 if (!n.show) return null;
                 let cName = `mx-2 mb-${(noticeType=="map")?"0":"2"}`;
-                if (n.tn_RevNotice!="0") cName += " bg-danger bg-opacity-50";
+                if (n.tn_RevNotice!="0") cName += " bg-revision";
                 if (n.expired) cName += " bg-secondary bg-opacity-50 expired";
                 const mailtoSubject = `Trail Condition Notice - ${n.mapName}`;
                 return (

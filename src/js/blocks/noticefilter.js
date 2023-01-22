@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Row, Col, Form } from "react-bootstrap";
 
 export default function NoticeFilter({maps,noticeFilters,setNoticeFilters,nonMapList}) {
     const [showArchived,setShowArchived] = useState(noticeFilters.archive);
     const [sortBy,setSortBy] = useState(noticeFilters.sortBy);
+
     const handleChange = e => {
         switch(e.target.name) {
             case "showMap":

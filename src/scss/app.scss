@@ -11,6 +11,10 @@ $enable-responsive-font-sizes: true;
 @import "../../node_modules/bootstrap/scss/variables";
 
 // 4. Include any default map overrides here
+$custom-colors: (
+    "revision":$red-200
+);
+$theme-colors: map-merge($theme-colors, $custom-colors);
 
 // 5. Include remainder of required parts
 @import "../../node_modules/bootstrap/scss/maps";
@@ -21,6 +25,7 @@ $enable-responsive-font-sizes: true;
     @import "../../node_modules/bootstrap/scss/bootstrap";
 }
 // 8. Add additional custom code here
+
 .bootstrap-styles {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: rgba(0,0,0,0);
@@ -31,7 +36,7 @@ $enable-responsive-font-sizes: true;
     font-weight: var(--bs-body-font-weight);
     line-height: var(--bs-body-line-height);
     margin: 0;
-    text-align: var(--bs-body-text-align)
+    text-align: var(--bs-body-text-align);
 }
 
 #trailconditions {
