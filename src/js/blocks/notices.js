@@ -91,7 +91,6 @@ function NoticeDetails({notices,isAdmin,handleAdminButtons,noticeType}) {
                             </div>}
                         </Col>
                         <Col md={9} className="border border-secondary p-2">
-                            {n.closure_text && <p className="text-danger d-none d-md-block"><strong>{n.tn_tempNotice=="1"&&<><Icon icon="mdi:alert"/>Temporary Notice: </>}{n.closure_text}</strong></p>}
                             <NoticeBody notice={n}/>
                         </Col>
                     </Row>
